@@ -1,0 +1,74 @@
+{
+    "structure": [
+        {
+            "name": "net",
+            "type": "Sequential",
+            "source": "class Sequential(Module):\n    r\"\"\"A sequential container.\n\n    Modules will be added to it in the or..."
+        },
+        {
+            "name": "net.0",
+            "type": "Linear",
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y..."
+        },
+        {
+            "name": "net.1",
+            "type": "GELU",
+            "source": "class GELU(Module):\n    r\"\"\"Applies the Gaussian Error Linear Units function.\n\n    .. math:: \\text{G..."
+        },
+        {
+            "name": "net.2",
+            "type": "Dropout",
+            "source": "class Dropout(_DropoutNd):\n    r\"\"\"During training, randomly zeroes some of the elements of the inpu..."
+        },
+        {
+            "name": "net.3",
+            "type": "Linear",
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y..."
+        },
+        {
+            "name": "net.4",
+            "type": "Dropout",
+            "source": "class Dropout(_DropoutNd):\n    r\"\"\"During training, randomly zeroes some of the elements of the inpu..."
+        },
+        {
+            "name": "norm",
+            "type": "LayerNorm",
+            "source": "class LayerNorm(Module):\n    r\"\"\"Applies Layer Normalization over a mini-batch of inputs.\n\n    This ..."
+        }
+    ],
+    "connections": [
+        {
+            "source": "net.0",
+            "target": "net.1",
+            "type": "normal"
+        },
+        {
+            "source": "net.1",
+            "target": "net.2",
+            "type": "normal"
+        },
+        {
+            "source": "net.2",
+            "target": "net.3",
+            "type": "normal"
+        },
+        {
+            "source": "net.3",
+            "target": "net.4",
+            "type": "normal"
+        },
+        {
+            "source": "add",
+            "target": "norm",
+            "type": "normal"
+        },
+        {
+            "source": "norm",
+            "target": "output",
+            "type": "output"
+        }
+    ],
+    "inputs": [
+        "x_1"
+    ]
+}

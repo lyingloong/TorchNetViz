@@ -1,0 +1,44 @@
+{
+    "structure": [
+        {
+            "name": "conv",
+            "type": "Conv2d",
+            "source": "class Conv2d(_ConvNd):\n    __doc__ = (\n        r\"\"\"Applies a 2D convolution over an input signal com..."
+        },
+        {
+            "name": "bn",
+            "type": "BatchNorm2d",
+            "source": "class BatchNorm2d(_BatchNorm):\n    r\"\"\"Applies Batch Normalization over a 4D input.\n\n    4D is a min..."
+        },
+        {
+            "name": "relu",
+            "type": "ReLU",
+            "source": "class ReLU(Module):\n    r\"\"\"Applies the rectified linear unit function element-wise.\n\n    :math:`\\te..."
+        }
+    ],
+    "connections": [
+        {
+            "source": "None",
+            "target": "conv",
+            "type": "normal"
+        },
+        {
+            "source": "conv",
+            "target": "bn",
+            "type": "normal"
+        },
+        {
+            "source": "bn",
+            "target": "relu",
+            "type": "normal"
+        },
+        {
+            "source": "relu",
+            "target": "output",
+            "type": "output"
+        }
+    ],
+    "inputs": [
+        "x_1"
+    ]
+}

@@ -1,0 +1,50 @@
+{
+    "structure": [
+        {
+            "name": "linear1",
+            "type": "Linear",
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y..."
+        },
+        {
+            "name": "linear2",
+            "type": "Linear",
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y..."
+        },
+        {
+            "name": "activation",
+            "type": "ReLU",
+            "source": "class ReLU(Module):\n    r\"\"\"Applies the rectified linear unit function element-wise.\n\n    :math:`\\te..."
+        }
+    ],
+    "connections": [
+        {
+            "source": "None",
+            "target": "linear1",
+            "type": "normal"
+        },
+        {
+            "source": "linear1",
+            "target": "activation",
+            "type": "normal"
+        },
+        {
+            "source": "None",
+            "target": "linear2",
+            "type": "normal"
+        },
+        {
+            "source": "linear2",
+            "target": "output",
+            "type": "output"
+        },
+        {
+            "source": "activation",
+            "target": "output",
+            "type": "output"
+        }
+    ],
+    "inputs": [
+        "x_1",
+        "y_1"
+    ]
+}
