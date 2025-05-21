@@ -1,3 +1,40 @@
-#output/
+# Output directories
+/logs/
+/__pycache__/
+*.pyc
+*.pyo
+*.pyd
 
+# Virtual environment
+/venv/
+/env/
+/.venv/
+/__pypackages__/
+
+# PyTorch & TorchScript models
+/models/*.pt
+/models/*.pth
+/models/*.onnx
+/models/__pycache__/
+
+# Development artifacts
 develop_log.txt
+*.log
+*.tmp
+*.bak
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Distribution / build files
+/dist/
+/build/
+*.egg-info/
