@@ -1,24 +1,49 @@
 {
     "structure": [
         {
-            "name": "linear1",
             "type": "Linear",
-            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y..."
+            "params": {
+                "training": "False",
+                "in_features": "8",
+                "out_features": "8"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y...",
+            "name": "linear1"
         },
         {
-            "name": "linear2",
             "type": "Linear",
-            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y..."
+            "params": {
+                "training": "False",
+                "in_features": "8",
+                "out_features": "8"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y...",
+            "name": "linear2"
         },
         {
-            "name": "activation",
             "type": "ReLU",
-            "source": "class ReLU(Module):\n    r\"\"\"Applies the rectified linear unit function element-wise.\n\n    :math:`\\te..."
+            "params": {
+                "training": "False",
+                "inplace": "False"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class ReLU(Module):\n    r\"\"\"Applies the rectified linear unit function element-wise.\n\n    :math:`\\te...",
+            "name": "activation"
         }
     ],
     "connections": [
         {
-            "source": "None",
+            "source": "activation",
+            "target": "output",
+            "type": "output"
+        },
+        {
+            "source": "x_1",
             "target": "linear1",
             "type": "normal"
         },
@@ -28,17 +53,12 @@
             "type": "normal"
         },
         {
-            "source": "None",
+            "source": "y_1",
             "target": "linear2",
             "type": "normal"
         },
         {
             "source": "linear2",
-            "target": "output",
-            "type": "output"
-        },
-        {
-            "source": "activation",
             "target": "output",
             "type": "output"
         }

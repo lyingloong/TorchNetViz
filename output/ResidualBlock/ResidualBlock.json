@@ -1,36 +1,102 @@
 {
     "structure": [
         {
-            "name": "conv1",
             "type": "Conv2d",
-            "source": "class Conv2d(_ConvNd):\n    __doc__ = (\n        r\"\"\"Applies a 2D convolution over an input signal com..."
+            "params": {
+                "training": "False",
+                "in_channels": "8",
+                "out_channels": "8",
+                "transposed": "False",
+                "groups": "1",
+                "padding_mode": "zeros"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Conv2d(_ConvNd):\n    __doc__ = (\n        r\"\"\"Applies a 2D convolution over an input signal com...",
+            "name": "conv1"
         },
         {
-            "name": "bn1",
             "type": "BatchNorm2d",
-            "source": "class BatchNorm2d(_BatchNorm):\n    r\"\"\"Applies Batch Normalization over a 4D input.\n\n    4D is a min..."
+            "params": {
+                "training": "False",
+                "num_features": "8",
+                "eps": "1e-05",
+                "momentum": "0.1",
+                "affine": "True",
+                "track_running_stats": "True"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class BatchNorm2d(_BatchNorm):\n    r\"\"\"Applies Batch Normalization over a 4D input.\n\n    4D is a min...",
+            "name": "bn1"
         },
         {
-            "name": "conv2",
             "type": "Conv2d",
-            "source": "class Conv2d(_ConvNd):\n    __doc__ = (\n        r\"\"\"Applies a 2D convolution over an input signal com..."
+            "params": {
+                "training": "False",
+                "in_channels": "8",
+                "out_channels": "8",
+                "transposed": "False",
+                "groups": "1",
+                "padding_mode": "zeros"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Conv2d(_ConvNd):\n    __doc__ = (\n        r\"\"\"Applies a 2D convolution over an input signal com...",
+            "name": "conv2"
         },
         {
-            "name": "bn2",
             "type": "BatchNorm2d",
-            "source": "class BatchNorm2d(_BatchNorm):\n    r\"\"\"Applies Batch Normalization over a 4D input.\n\n    4D is a min..."
+            "params": {
+                "training": "False",
+                "num_features": "8",
+                "eps": "1e-05",
+                "momentum": "0.1",
+                "affine": "True",
+                "track_running_stats": "True"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class BatchNorm2d(_BatchNorm):\n    r\"\"\"Applies Batch Normalization over a 4D input.\n\n    4D is a min...",
+            "name": "bn2"
         },
         {
-            "name": "relu",
             "type": "ReLU",
-            "source": "class ReLU(Module):\n    r\"\"\"Applies the rectified linear unit function element-wise.\n\n    :math:`\\te..."
+            "params": {
+                "training": "False",
+                "inplace": "False"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class ReLU(Module):\n    r\"\"\"Applies the rectified linear unit function element-wise.\n\n    :math:`\\te...",
+            "name": "relu"
         }
     ],
     "connections": [
         {
-            "source": "None",
+            "source": "relu",
+            "target": "output",
+            "type": "output"
+        },
+        {
+            "source": "<built-in function add>",
+            "target": "relu",
+            "type": "normal"
+        },
+        {
+            "source": "x_1",
             "target": "relu",
             "type": "skip"
+        },
+        {
+            "source": "x_1",
+            "target": "<built-in function add>",
+            "type": "normal"
+        },
+        {
+            "source": "x_1",
+            "target": "conv1",
+            "type": "normal"
         },
         {
             "source": "conv1",
@@ -43,11 +109,6 @@
             "type": "normal"
         },
         {
-            "source": "relu",
-            "target": "output",
-            "type": "output"
-        },
-        {
             "source": "conv2",
             "target": "bn2",
             "type": "normal"
@@ -58,8 +119,8 @@
             "type": "skip"
         },
         {
-            "source": "<built-in function add>",
-            "target": "relu",
+            "source": "bn2",
+            "target": "<built-in function add>",
             "type": "normal"
         }
     ],
