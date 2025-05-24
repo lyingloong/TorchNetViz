@@ -1,5 +1,5 @@
 # Output directories
-/logs/
+/develop_logs/
 /__pycache__/
 *.pyc
 *.pyo
@@ -18,7 +18,6 @@
 /models/__pycache__/
 
 # Development artifacts
-develop_log.txt
 *.log
 *.tmp
 *.bak

@@ -117,6 +117,24 @@ def visualize_structure(
         margin=dict(l=20, r=20, t=20, b=20)
     )
 
+    # Add arrows
+    annotations = []
+    for u, v in normal_edges + skip_edges + output_edges:
+        x0, y0 = pos[u]
+        x1, y1 = pos[v]
+        annotations.append(dict(
+            ax=x0, ay=y0,
+            x=x1, y=y1,
+            xref='x', yref='y',
+            axref='x', ayref='y',
+            showarrow=True,
+            arrowhead=3,
+            arrowsize=3,
+            arrowwidth=1,
+            opacity=0.6
+        ))
+    fig.update_layout(annotations=annotations)
+
     # Save or show
     if output_path:
         os.makedirs(os.path.dirname(output_path), exist_ok=True)

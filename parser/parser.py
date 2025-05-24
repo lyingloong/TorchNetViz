@@ -1,6 +1,8 @@
 import inspect
 import itertools
 import os
+import re
+from collections import defaultdict
 from typing import Dict, List, Optional, Tuple, Union, Any
 from torch import nn, Tensor
 import torch
@@ -77,14 +79,60 @@ def parse_model_structure(model: nn.Module) -> List[Dict[str, str]]:
     structure = []
     for name, module in model.named_modules():
         if name:
-            module_type = type(module).__name__
-            source_code = inspect.getsource(module.__class__)
-            structure.append({
-                "name": name,
-                "type": module_type,
-                "source": source_code
-            })
+            info = extract_module_info(module)
+            info["name"] = name
+            if info["type"] == 'Sequential':
+                info["submodules"] = []
+                for idx, sub_module in enumerate(module):
+                    if isinstance(sub_module, nn.Module):
+                        sub_name = f"{name}.{idx}"
+                        info["submodules"].append(sub_name)
+            structure.append(info)
     return structure
+
+
+def extract_module_info(module: nn.Module) -> Dict[str, Any]:
+    """
+    Extracts key structural information from a PyTorch module in a generic way.
+
+    Args:
+        module (nn.Module): The module to analyze.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing:
+            - 'type': The class name of the module (e.g., 'Conv2d', 'Linear').
+            - 'params': A dictionary of constructor parameters (e.g., in_channels, out_channels).
+            - 'has_weight': Boolean indicating whether the module has learnable weights.
+            - 'has_bias': Boolean indicating whether the module has a bias parameter.
+            - 'source': Source code of the module's class (for visualization or documentation).
+    """
+    info = {
+        "type": type(module).__name__,
+        "params": {},
+        "has_weight": False,
+        "has_bias": False,
+        "source": "",
+    }
+
+    # Extract constructor parameters (from __dict__)
+    if hasattr(module, "__dict__"):
+        for key, value in module.__dict__.items():
+            if not key.startswith("_") and not isinstance(value, (nn.Module, list, dict, tuple)):
+                info["params"][key] = str(value)
+
+    # Check for weight and bias parameters
+    if hasattr(module, "weight") and isinstance(module.weight, nn.Parameter):
+        info["has_weight"] = True
+    if hasattr(module, "bias") and isinstance(module.bias, nn.Parameter):
+        info["has_bias"] = True
+
+    # Try to retrieve source code for display/documentation purposes
+    try:
+        info["source"] = inspect.getsource(module.__class__)
+    except Exception:
+        info["source"] = ""
+
+    return info
 
 
 def get_model_connections(traced_model) -> List[Dict[str, Union[str, None]]]:
@@ -100,33 +148,106 @@ def get_model_connections(traced_model) -> List[Dict[str, Union[str, None]]]:
     connections = []
     inputs = []
     module_nodes: Dict[Any, Node] = {}
-    user_map: Dict[Node, List[Node]] = {}
 
-    # Build module-to-node mapping
-    for node in traced_model.graph.nodes:
-        module_nodes[node.target] = node
-        user_map[node] = []
+    # Build aggregated module-to-node mapping with constant merging
+    constant_groups = defaultdict(list)
 
-    # Build user map
+    # First pass: group all constant-like nodes by their base name
     for node in traced_model.graph.nodes:
+        match = re.match(r'([a-zA-Z_]+)(\d+)(?:_(\d+))?', node.name)
+        if match:
+            base_name, main_id, _ = match.groups()
+            base_key = f"{base_name}{main_id}"
+            constant_groups[base_key].append(node)
+        else:
+            # Add non-constant nodes to module_nodes
+            module_nodes[node.target] = node
+
+    # Second pass: build module_nodes with merged info
+    for base_key, nodes in constant_groups.items():
+        base_node = next((n for n in nodes if '_' not in n.name), nodes[0])
+        # Merge args and kwargs
+        merged_args = []
+        merged_kwargs = {}
+
+        for node in nodes:
+            if node != base_node:
+                if node.args:
+                    merged_args.extend(node.args)
+                if node.kwargs:
+                    merged_kwargs.update(node.kwargs)
+        # Update base node to include merged info
+        new_args = list(base_node.args) + merged_args
+        new_kwargs = dict(base_node.kwargs)
+        new_kwargs.update(merged_kwargs)
+        base_node._update_args_kwargs(tuple(new_args), new_kwargs)
+
+        module_nodes[base_node.target] = base_node
+
+    # Third pass: redirect constant-args of other nodes to base node
+    for node in module_nodes.values():
+        # Rebuild args
+        new_args = []
         for arg in node.args:
             if isinstance(arg, Node):
-                user_map[arg].append(node)
+                new_args += [arg]
             else:
                 for a in arg:
-                    if isinstance(a, Node):
-                        user_map[a].append(node)
+                    if not isinstance(a, Node):
+                        raise
+                    new_args += [a]
+        node.args = tuple(new_args)
+    for node in module_nodes.values():
+        new_args = []
+        for arg in node.args:
+            if isinstance(arg, Node):
+                match = re.match(r'([a-zA-Z_]+)(\d+)_(\d+)', arg.name)
+                if match:
+                    new_args.append(module_nodes[arg.target])
+                else:
+                    new_args.append(arg)
+            else:
+                raise
+        node._update_args_kwargs(tuple(new_args), node.kwargs)
+        for node in new_args:
+            node._update_args_kwargs(node.args, node.kwargs)
 
+
+
+    # Build user map
+    user_map = build_user_map(module_nodes)
+
+    # Preprocess inputs and tensor_constants
+    input_counter = 0
+    for node in module_nodes.values():
+        if node.op == "placeholder":
+            inputs.append({"name": node.target, "id": input_counter})
+            input_counter += 1
+        elif node.op == "get_attr":
+            # redirect to inputs
+            id = re.search(r'constant(\d+)', node.target)
+            for input in inputs:
+                if input["id"] == int(id.group(1)):
+                    node.target = input["name"]
+                    node.name = input["name"]
+                    break
     # Extract connections
     for src_node in module_nodes.values():
-        if src_node.op == "placeholder":
-            inputs.append(src_node.target)
-            continue
-        if src_node.op == "get_attr":
-            src_node.target = None
-
         for user_node in user_map[src_node]:
             if user_node.op == "call_function":
+                for next_node in user_map.get(user_node, []):
+                    if next_node.op == "call_module":
+                        connections.append({
+                            "source": src_node.target,
+                            "target": next_node.target,
+                            "type": "skip"
+                        })
+                connections.append({
+                    "source": src_node.target,
+                    "target": user_node.target,
+                    "type": "normal"
+                })
+            elif user_node.op == "call_method":
                 for next_node in user_map.get(user_node, []):
                     if next_node.op == "call_module":
                         connections.append({
@@ -134,28 +255,64 @@ def get_model_connections(traced_model) -> List[Dict[str, Union[str, None]]]:
                             "target": str(next_node.target),
                             "type": "skip"
                         })
+                connections.append({
+                    "source": src_node.target,
+                    "target": user_node.target,
+                    "type": "normal"
+                })
             elif user_node.op == "call_module":
                 connections.append({
-                    "source": str(src_node.target),
-                    "target": str(user_node.target),
+                    "source": src_node.target,
+                    "target": user_node.target,
                     "type": "normal"
                 })
             elif user_node.op == "output":
                 connections.append({
-                    "source": str(src_node.target),
+                    "source": src_node.target,
                     "target": "output",
                     "type": "output"
                 })
 
-    # Patch missing sources with input names
-    for input_name in inputs:
-        for conn in connections:
-            if conn["source"] is None:
-                conn["source"] = str(input_name)
-                conn["type"] = "input"
-                break
-
     return connections
+
+def build_user_map(module_nodes: Dict[Any, Node]) -> Dict[Node, List[Node]]:
+    """
+    Build a mapping from each node to its consumer nodes.
+
+    Args:
+        module_nodes (Dict[Any, Node]): Mapping from module targets to Nodes.
+
+    Returns:
+        Dict[Node, List[Node]]: A dictionary where keys are nodes and values are lists of consumer nodes.
+    """
+    user_map = defaultdict(list)
+    for src_node in module_nodes.values():
+        new_users = []
+        for user in src_node.users:
+            if isinstance(user, Node):
+                # Match sub-constant pattern like _tensor_constant0_1
+                match = re.match(r'([a-zA-Z_]+)(\d+)_(\d+)', user.name)
+                if match:
+                    base_name = f"{match.group(1)}{match.group(2)}"
+                    # Find the base constant node in module_nodes
+                    base_key = None
+                    for node in module_nodes.values():
+                        if node.name == base_name:
+                            base_key = node
+                            break
+                    if base_key is not None:
+                        # Replace the sub-constant with the base constant node
+                        new_users.append(base_key)
+                else:
+                    new_users.append(user)
+            else:
+                raise
+        src_node.users = new_users
+
+    for node in module_nodes.values():
+        for user_node in node.users:
+            user_map[node].append(user_node)
+    return user_map
 
 
 def create_example_inputs(
@@ -215,7 +372,7 @@ def create_example_inputs(
     return example_inputs
 
 
-def get_input_shapes(model: Union[nn.Module, ScriptModule], max_args: int = 6) -> Dict[str, Tuple[int, ...]]:
+def get_input_shapes(model: Union[nn.Module, ScriptModule], max_args: int = 10) -> Dict[str, Tuple[int, ...]]:
     """
     Automatically infer tensor input shapes by probing forward() method.
 
