@@ -15,7 +15,7 @@
 - Modular logging system for tracking development progress
 
 ## 🧰 Requirements
-- See `requirements.txt` for dependencies
+- See [`requirements.txt`](requirements.txt) for dependencies
 
 ## 📁 Project Structure
 ```bash
@@ -33,11 +33,8 @@
 
 ### Installation
 ```bash
-pip install torch
-git clone https://github.com/yourusername/TorchNetViz.git
-cd TorchNetViz
+pip install -r requirements.txt
 ```
-
 
 ### Usage
 To visualize a model:
