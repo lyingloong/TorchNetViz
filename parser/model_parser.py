@@ -1,9 +1,11 @@
 import os
 import logging
 from typing import Dict, List, Optional, Tuple, Union, Any
+import torch
 from torch import nn
 from torch.fx import symbolic_trace
 from torch.jit import ScriptModule
+import torch._dynamo as dynamo
 import warnings
 import json
 from .shape_inference import get_input_shapes
@@ -19,7 +21,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def parse_model(model: Union[nn.Module, ScriptModule], input_shapes: Optional[Dict[str, Tuple]] = None, dim_sizes: Optional[List[int]] = None,) -> Dict[str, Any]:
+def parse_model(
+    model: Union[nn.Module, ScriptModule],
+    input_shapes: Optional[Dict[str, Tuple]] = None,
+    dim_sizes: Optional[List[int]] = None,
+    ndims: int = 3
+) -> Dict[str, Any]:
     """
     Unified entry point for model structure parsing.
 
@@ -35,12 +42,25 @@ def parse_model(model: Union[nn.Module, ScriptModule], input_shapes: Optional[Di
     """
     if isinstance(model, nn.Module):
         if input_shapes is None:
-            input_shapes = get_input_shapes(model, dim_sizes=dim_sizes)
+            input_shapes = get_input_shapes(model, ndims=ndims, dim_sizes=dim_sizes)
         example_inputs = create_example_inputs(model, input_shapes)
+        example_input_list = list(example_inputs.values())
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            traced_model = symbolic_trace(model, concrete_args=example_inputs)
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                traced_model = symbolic_trace(model, concrete_args=example_inputs)
+        except Exception as e:
+            print(f"[symbolic_trace failed] {e}, falling back to torch._dynamo.export()")
+
+            def forward_fn(*args):
+                return model(*args)
+
+            try:
+                export_result = dynamo.export(forward_fn)(*example_input_list)
+                traced_model = export_result.graph_module
+            except Exception as e2:
+                raise RuntimeError(f"Both symbolic_trace and torchdynamo export failed:\n{e2}")
 
         structure = parse_model_structure(model)
         connections = get_model_connections(traced_model)
@@ -53,7 +73,6 @@ def parse_model(model: Union[nn.Module, ScriptModule], input_shapes: Optional[Di
         }
 
     elif isinstance(model, ScriptModule):
-        # Placeholder for future ScriptModule handling logic
         raise NotImplementedError("ScriptModule support not yet implemented in this version.")
     else:
         raise TypeError(f"Unsupported model type: {type(model)}")

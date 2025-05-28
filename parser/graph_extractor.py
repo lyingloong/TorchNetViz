@@ -68,9 +68,11 @@ def get_model_connections(traced_model) -> List[Dict[str, Union[str, None]]]:
 
     # Third pass: redirect constant-args of other nodes to base node
     for node in module_nodes.values():
+        _print_node_info(node)
         # Rebuild args
         new_args = []
         for arg in node.args:
+            print(arg)
             if isinstance(arg, Node):
                 new_args += [arg]
             else:
@@ -195,3 +197,16 @@ def build_user_map(module_nodes: Dict[Any, Node]) -> Dict[Node, List[Node]]:
         for user_node in node.users:
             user_map[node].append(user_node)
     return user_map
+
+def _print_node_info(node: Node) -> None:
+    print(f"Node {node.name}")
+    print(f"\top: {node.op}")
+    print(f"\ttarget: {node.target}")
+    print(f"\tall_input_nodes: {node.all_input_nodes}")
+    print(f"\targs: {node.args}")
+    print(f"\tkwargs: {node.kwargs}")
+    # print(f"\tmeta: {node.meta}")
+    print(f"\tusers: {node.users}")
+    print(f"\tnext: {node.next}")
+    print(f"\tprev: {node.prev}")
+    print(f"\ttype: {node.type}")

@@ -24,11 +24,20 @@ $json_obj = @{
     }
 }
 
+$input_shapes_obj = @{
+    x_enc        = @(1, 96, 7)
+    x_mark_enc   = @(1, 96, 1)
+    x_dec        = @(1, 128, 96)
+    x_mark_dec   = @(1, 128, 1)
+}
+
 # 转换为压缩 JSON 字符串（不含换行）
 $json_str = $json_obj | ConvertTo-Json -Compress -Depth 3
+$input_shapes_str = $input_shapes_obj | ConvertTo-Json -Compress -Depth 3
 
 # Base64 编码
 $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($json_str))
+$encoded_input_shapes = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($input_shapes_str))
 
 # 构造 JSON list: ["base64字符串"]
 $arg_string = "[`'$encoded`']"
@@ -38,4 +47,6 @@ python main.py `
     --model "$model" `
     --model_file "$model_file" `
     --args "$arg_string" `
-    --input_dim_sizes "1,7,16,96,128,256"
+    --input_dim_sizes "1,7,96,128"`
+    --input_shapes "$encoded_input_shapes"
+#    *> TimeXer_output.txt

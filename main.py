@@ -3,10 +3,8 @@ import ast
 import base64
 import inspect
 import os
-import torch
 from parser.model_parser import parse_model, save_model_structure
 from visualizer.graph_visualizer import visualize_structure
-import torch.nn as nn
 import json
 from typing import Optional, Dict, Tuple, Union, List, Any
 from models.custom_layers import *
@@ -14,17 +12,28 @@ from parser.utils import auto_instantiate
 
 def parse_input_shapes(input_str: Optional[str]) -> Optional[Dict[str, Tuple[int, ...]]]:
     """
-    将用户传入的 JSON 字符串解析为 Dict[str, shape]
-    示例输入：'{"x": [1, 3, 224, 224], "cls_token": [1, 1, 768]}'
+    将用户传入的 input_shapes 参数解析为 Dict[str, shape]
+    支持两种格式：
+        - JSON 字符串：'{"x": [1, 3, 224, 224]}'
+        - Base64 编码过的 JSON 字符串（推荐用于命令行）
     """
     if not input_str:
         return None
+
     try:
+        # 先尝试直接解析为 JSON
         shapes = json.loads(input_str)
-        # 转换 list to tuple
-        return {k: tuple(v) for k, v in shapes.items()}
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid input_shapes JSON format: {e}")
+    except json.JSONDecodeError:
+        try:
+            # 如果失败，尝试解码 Base64 再解析
+            decoded = base64.b64decode(input_str).decode("utf-8")
+            shapes = json.loads(decoded)
+        except Exception as decode_error:
+            raise ValueError(f"Invalid input_shapes format. Not valid JSON or Base64: {decode_error}")
+
+    # 转换 list to tuple
+    return {k: tuple(v) for k, v in shapes.items()}
+
 
 def parse_args_argument(arg_list_str: Optional[str]) -> Optional[List[Dict[str, Any]]]:
     """
@@ -116,7 +125,8 @@ if __name__ == "__main__":
                         help="自定义模型所在文件名（不含.py），默认从内置模型中查找")
     parser.add_argument("--input_dim_sizes", type=str,  default=None,
                         help="输入维度大小参考列表")
-
+    parser.add_argument("--ndims", type=int, default=3,
+                        help="forward输入最大维度数(含batch)")
     args = parser.parse_args()
 
     if args.pt:
@@ -156,9 +166,14 @@ if __name__ == "__main__":
     else:
         input_dim_sizes = None
 
+    if args.input_shapes:
+        input_shapes = parse_input_shapes(args.input_shapes)
+    else:
+        input_shapes = None
+
     os.makedirs(f"./output/{args.model}", exist_ok=True)
 
-    result = parse_model(model, args.input_shapes, input_dim_sizes)
+    result = parse_model(model, input_shapes, dim_sizes=input_dim_sizes, ndims=args.ndims)
     save_model_structure(result, f"output/{args.model}/{args.model}.json")
     visualize_structure(result["structure"], result["connections"],
                         inputs=result["inputs"], output_path=f"output/{args.model}/{args.model}.html")

@@ -20,6 +20,7 @@
 *.log
 *.tmp
 *.bak
+*_output.txt  # 新增忽略所有_output.txt结尾的输出文件
 
 # IDE and editor files
 .vscode/
