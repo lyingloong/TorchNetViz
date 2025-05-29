@@ -1,4 +1,5 @@
 import itertools
+import math
 import os
 import networkx as nx
 import plotly.graph_objects as go
@@ -140,18 +141,6 @@ def visualize_structure(
         )
     )
 
-    # --- 箭头注释 ---
-    annotations = []
-    for u, v in normal_edges + skip_edges + output_edges:
-        x0, y0 = pos[u]
-        x1, y1 = pos[v]
-        annotations.append(dict(
-            ax=x0, ay=y0, x=x1, y=y1,
-            xref='x', yref='y', axref='x', ayref='y',
-            showarrow=True, arrowhead=3, arrowsize=2,
-            arrowwidth=1, opacity=0.6
-        ))
-
     # --- 布局绘制 ---
     fig = go.Figure(data=edge_traces + [node_trace])
     fig.update_layout(
@@ -160,7 +149,6 @@ def visualize_structure(
         yaxis=dict(showgrid=showgrid, zeroline=False, visible=False),
         plot_bgcolor='white',
         margin=dict(l=20, r=20, t=20, b=20),
-        annotations=annotations
     )
 
     # --- 保存或显示 ---
