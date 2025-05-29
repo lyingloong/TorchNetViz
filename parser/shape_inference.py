@@ -212,17 +212,31 @@ def get_input_shapes(
 
         for i in range(0, len(shape_combos), batch_size):
             current_batch = shape_combos[i:i + batch_size]
+            future_to_shape = {}
+
+            def handle_future(future):
+                try:
+                    res = future.result(timeout=10)
+                    return res
+                except Exception as e:
+                    logger.debug(f"Error during shape combo evaluation: {e}")
+                    return None
+
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                future_to_shape = {executor.submit(try_shape_combo, combo): combo for combo in current_batch}
-                for future in as_completed(future_to_shape):
+                for combo in current_batch:
                     try:
-                        result = future.result(timeout=10)
-                        if result:
-                            for f in future_to_shape:
-                                f.cancel()
-                            break
+                        future = executor.submit(try_shape_combo, combo)
+                        future_to_shape[future] = combo
                     except Exception as e:
-                        logger.debug(f"Error during shape combo evaluation: {e}")
+                        logger.debug(f"Failed to submit task for combo {combo}: {e}")
+                        continue
+                for future in as_completed(future_to_shape):
+                    result = handle_future(future)
+                    if result:
+                        for f in future_to_shape:
+                            f.cancel()
+                        break
+
             if result:
                 break
 
