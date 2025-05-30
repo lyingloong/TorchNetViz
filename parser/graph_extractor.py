@@ -1,8 +1,10 @@
+import logging
 import re
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple, Union, Any
 from torch.fx.node import Node
 
+logger = logging.getLogger(__name__)
 
 def get_placeholders(traced_model) -> List[str]:
     """
@@ -36,11 +38,13 @@ def get_model_connections(traced_model) -> List[Dict[str, Union[str, None]]]:
 
     # First pass: group all constant-like nodes by their base name
     for node in traced_model.graph.nodes:
+        # _print_node_info(node)
         match = re.match(r'([a-zA-Z_]+)(\d+)(?:_(\d+))?', node.name)
         if match:
             base_name, main_id, _ = match.groups()
             base_key = f"{base_name}{main_id}"
             constant_groups[base_key].append(node)
+            # logger.debug(f"Node {node.name} matched base key {base_key}")
         else:
             # Add non-constant nodes to module_nodes
             module_nodes[node.target] = node
@@ -68,18 +72,19 @@ def get_model_connections(traced_model) -> List[Dict[str, Union[str, None]]]:
 
     # Third pass: redirect constant-args of other nodes to base node
     for node in module_nodes.values():
-        _print_node_info(node)
+        # _print_node_info(node)
         # Rebuild args
         new_args = []
         for arg in node.args:
-            print(arg)
             if isinstance(arg, Node):
                 new_args += [arg]
-            else:
+            elif isinstance(arg, tuple):
                 for a in arg:
                     if not isinstance(a, Node):
                         raise
                     new_args += [a]
+            else:
+                logger.debug(f"Passing arg \"{arg}\" in node \"{node.name}\" with args {node.args}")
         node.args = tuple(new_args)
     for node in module_nodes.values():
         new_args = []

@@ -1,0 +1,678 @@
+{
+    "structure": [
+        {
+            "type": "EnEmbedding",
+            "params": {
+                "training": "True",
+                "patch_len": "16",
+                "d_model": "128"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class EnEmbedding(nn.Module):\n    def __init__(self, n_vars, d_model, patch_len, dropout):\n        s...",
+            "name": "en_embedding"
+        },
+        {
+            "type": "Linear",
+            "params": {
+                "training": "True",
+                "in_features": "16",
+                "out_features": "128"
+            },
+            "has_weight": true,
+            "has_bias": false,
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y...",
+            "name": "en_embedding.value_embedding"
+        },
+        {
+            "type": "PositionalEmbedding",
+            "params": {
+                "training": "True"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class PositionalEmbedding(nn.Module):\n    def __init__(self, d_model, max_len=5000):\n        super(P...",
+            "name": "en_embedding.position_embedding"
+        },
+        {
+            "type": "Dropout",
+            "params": {
+                "training": "True",
+                "p": "0.1",
+                "inplace": "False"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class Dropout(_DropoutNd):\n    r\"\"\"During training, randomly zeroes some of the elements of the inpu...",
+            "name": "en_embedding.dropout"
+        },
+        {
+            "type": "DataEmbedding_inverted",
+            "params": {
+                "training": "True"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class DataEmbedding_inverted(nn.Module):\n    def __init__(self, c_in, d_model, embed_type='fixed', f...",
+            "name": "ex_embedding"
+        },
+        {
+            "type": "Linear",
+            "params": {
+                "training": "True",
+                "in_features": "96",
+                "out_features": "128"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y...",
+            "name": "ex_embedding.value_embedding"
+        },
+        {
+            "type": "Dropout",
+            "params": {
+                "training": "True",
+                "p": "0.1",
+                "inplace": "False"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class Dropout(_DropoutNd):\n    r\"\"\"During training, randomly zeroes some of the elements of the inpu...",
+            "name": "ex_embedding.dropout"
+        },
+        {
+            "type": "Encoder",
+            "params": {
+                "training": "True",
+                "projection": "None"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class Encoder(nn.Module):\n    def __init__(self, layers, norm_layer=None, projection=None):\n        ...",
+            "name": "encoder"
+        },
+        {
+            "type": "ModuleList",
+            "params": {
+                "training": "True"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class ModuleList(Module):\n    r\"\"\"Holds submodules in a list.\n\n    :class:`~torch.nn.ModuleList` can...",
+            "name": "encoder.layers"
+        },
+        {
+            "type": "EncoderLayer",
+            "params": {
+                "training": "True",
+                "activation": "<built-in function gelu>"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class EncoderLayer(nn.Module):\n    def __init__(self, self_attention, cross_attention, d_model, d_ff...",
+            "name": "encoder.layers.0"
+        },
+        {
+            "type": "AttentionLayer",
+            "params": {
+                "training": "True",
+                "n_heads": "4"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class AttentionLayer(nn.Module):\n    def __init__(self, attention, d_model, n_heads, d_keys=None,\n  ...",
+            "name": "encoder.layers.0.self_attention"
+        },
+        {
+            "type": "FullAttention",
+            "params": {
+                "training": "True",
+                "scale": "None",
+                "mask_flag": "False",
+                "output_attention": "False"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class FullAttention(nn.Module):\n    def __init__(self, mask_flag=True, factor=5, scale=None, attenti...",
+            "name": "encoder.layers.0.self_attention.inner_attention"
+        },
+        {
+            "type": "Dropout",
+            "params": {
+                "training": "True",
+                "p": "0.1",
+                "inplace": "False"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class Dropout(_DropoutNd):\n    r\"\"\"During training, randomly zeroes some of the elements of the inpu...",
+            "name": "encoder.layers.0.self_attention.inner_attention.dropout"
+        },
+        {
+            "type": "Linear",
+            "params": {
+                "training": "True",
+                "in_features": "128",
+                "out_features": "128"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y...",
+            "name": "encoder.layers.0.self_attention.query_projection"
+        },
+        {
+            "type": "Linear",
+            "params": {
+                "training": "True",
+                "in_features": "128",
+                "out_features": "128"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y...",
+            "name": "encoder.layers.0.self_attention.key_projection"
+        },
+        {
+            "type": "Linear",
+            "params": {
+                "training": "True",
+                "in_features": "128",
+                "out_features": "128"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y...",
+            "name": "encoder.layers.0.self_attention.value_projection"
+        },
+        {
+            "type": "Linear",
+            "params": {
+                "training": "True",
+                "in_features": "128",
+                "out_features": "128"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y...",
+            "name": "encoder.layers.0.self_attention.out_projection"
+        },
+        {
+            "type": "AttentionLayer",
+            "params": {
+                "training": "True",
+                "n_heads": "4"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class AttentionLayer(nn.Module):\n    def __init__(self, attention, d_model, n_heads, d_keys=None,\n  ...",
+            "name": "encoder.layers.0.cross_attention"
+        },
+        {
+            "type": "FullAttention",
+            "params": {
+                "training": "True",
+                "scale": "None",
+                "mask_flag": "False",
+                "output_attention": "False"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class FullAttention(nn.Module):\n    def __init__(self, mask_flag=True, factor=5, scale=None, attenti...",
+            "name": "encoder.layers.0.cross_attention.inner_attention"
+        },
+        {
+            "type": "Dropout",
+            "params": {
+                "training": "True",
+                "p": "0.1",
+                "inplace": "False"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class Dropout(_DropoutNd):\n    r\"\"\"During training, randomly zeroes some of the elements of the inpu...",
+            "name": "encoder.layers.0.cross_attention.inner_attention.dropout"
+        },
+        {
+            "type": "Linear",
+            "params": {
+                "training": "True",
+                "in_features": "128",
+                "out_features": "128"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y...",
+            "name": "encoder.layers.0.cross_attention.query_projection"
+        },
+        {
+            "type": "Linear",
+            "params": {
+                "training": "True",
+                "in_features": "128",
+                "out_features": "128"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y...",
+            "name": "encoder.layers.0.cross_attention.key_projection"
+        },
+        {
+            "type": "Linear",
+            "params": {
+                "training": "True",
+                "in_features": "128",
+                "out_features": "128"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y...",
+            "name": "encoder.layers.0.cross_attention.value_projection"
+        },
+        {
+            "type": "Linear",
+            "params": {
+                "training": "True",
+                "in_features": "128",
+                "out_features": "128"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y...",
+            "name": "encoder.layers.0.cross_attention.out_projection"
+        },
+        {
+            "type": "Conv1d",
+            "params": {
+                "training": "True",
+                "in_channels": "128",
+                "out_channels": "256",
+                "transposed": "False",
+                "groups": "1",
+                "padding_mode": "zeros"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Conv1d(_ConvNd):\n    __doc__ = (\n        r\"\"\"Applies a 1D convolution over an input signal com...",
+            "name": "encoder.layers.0.conv1"
+        },
+        {
+            "type": "Conv1d",
+            "params": {
+                "training": "True",
+                "in_channels": "256",
+                "out_channels": "128",
+                "transposed": "False",
+                "groups": "1",
+                "padding_mode": "zeros"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Conv1d(_ConvNd):\n    __doc__ = (\n        r\"\"\"Applies a 1D convolution over an input signal com...",
+            "name": "encoder.layers.0.conv2"
+        },
+        {
+            "type": "LayerNorm",
+            "params": {
+                "training": "True",
+                "eps": "1e-05",
+                "elementwise_affine": "True"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class LayerNorm(Module):\n    r\"\"\"Applies Layer Normalization over a mini-batch of inputs.\n\n    This ...",
+            "name": "encoder.layers.0.norm1"
+        },
+        {
+            "type": "LayerNorm",
+            "params": {
+                "training": "True",
+                "eps": "1e-05",
+                "elementwise_affine": "True"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class LayerNorm(Module):\n    r\"\"\"Applies Layer Normalization over a mini-batch of inputs.\n\n    This ...",
+            "name": "encoder.layers.0.norm2"
+        },
+        {
+            "type": "LayerNorm",
+            "params": {
+                "training": "True",
+                "eps": "1e-05",
+                "elementwise_affine": "True"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class LayerNorm(Module):\n    r\"\"\"Applies Layer Normalization over a mini-batch of inputs.\n\n    This ...",
+            "name": "encoder.layers.0.norm3"
+        },
+        {
+            "type": "Dropout",
+            "params": {
+                "training": "True",
+                "p": "0.1",
+                "inplace": "False"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class Dropout(_DropoutNd):\n    r\"\"\"During training, randomly zeroes some of the elements of the inpu...",
+            "name": "encoder.layers.0.dropout"
+        },
+        {
+            "type": "EncoderLayer",
+            "params": {
+                "training": "True",
+                "activation": "<built-in function gelu>"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class EncoderLayer(nn.Module):\n    def __init__(self, self_attention, cross_attention, d_model, d_ff...",
+            "name": "encoder.layers.1"
+        },
+        {
+            "type": "AttentionLayer",
+            "params": {
+                "training": "True",
+                "n_heads": "4"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class AttentionLayer(nn.Module):\n    def __init__(self, attention, d_model, n_heads, d_keys=None,\n  ...",
+            "name": "encoder.layers.1.self_attention"
+        },
+        {
+            "type": "FullAttention",
+            "params": {
+                "training": "True",
+                "scale": "None",
+                "mask_flag": "False",
+                "output_attention": "False"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class FullAttention(nn.Module):\n    def __init__(self, mask_flag=True, factor=5, scale=None, attenti...",
+            "name": "encoder.layers.1.self_attention.inner_attention"
+        },
+        {
+            "type": "Dropout",
+            "params": {
+                "training": "True",
+                "p": "0.1",
+                "inplace": "False"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class Dropout(_DropoutNd):\n    r\"\"\"During training, randomly zeroes some of the elements of the inpu...",
+            "name": "encoder.layers.1.self_attention.inner_attention.dropout"
+        },
+        {
+            "type": "Linear",
+            "params": {
+                "training": "True",
+                "in_features": "128",
+                "out_features": "128"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y...",
+            "name": "encoder.layers.1.self_attention.query_projection"
+        },
+        {
+            "type": "Linear",
+            "params": {
+                "training": "True",
+                "in_features": "128",
+                "out_features": "128"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y...",
+            "name": "encoder.layers.1.self_attention.key_projection"
+        },
+        {
+            "type": "Linear",
+            "params": {
+                "training": "True",
+                "in_features": "128",
+                "out_features": "128"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y...",
+            "name": "encoder.layers.1.self_attention.value_projection"
+        },
+        {
+            "type": "Linear",
+            "params": {
+                "training": "True",
+                "in_features": "128",
+                "out_features": "128"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y...",
+            "name": "encoder.layers.1.self_attention.out_projection"
+        },
+        {
+            "type": "AttentionLayer",
+            "params": {
+                "training": "True",
+                "n_heads": "4"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class AttentionLayer(nn.Module):\n    def __init__(self, attention, d_model, n_heads, d_keys=None,\n  ...",
+            "name": "encoder.layers.1.cross_attention"
+        },
+        {
+            "type": "FullAttention",
+            "params": {
+                "training": "True",
+                "scale": "None",
+                "mask_flag": "False",
+                "output_attention": "False"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class FullAttention(nn.Module):\n    def __init__(self, mask_flag=True, factor=5, scale=None, attenti...",
+            "name": "encoder.layers.1.cross_attention.inner_attention"
+        },
+        {
+            "type": "Dropout",
+            "params": {
+                "training": "True",
+                "p": "0.1",
+                "inplace": "False"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class Dropout(_DropoutNd):\n    r\"\"\"During training, randomly zeroes some of the elements of the inpu...",
+            "name": "encoder.layers.1.cross_attention.inner_attention.dropout"
+        },
+        {
+            "type": "Linear",
+            "params": {
+                "training": "True",
+                "in_features": "128",
+                "out_features": "128"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y...",
+            "name": "encoder.layers.1.cross_attention.query_projection"
+        },
+        {
+            "type": "Linear",
+            "params": {
+                "training": "True",
+                "in_features": "128",
+                "out_features": "128"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y...",
+            "name": "encoder.layers.1.cross_attention.key_projection"
+        },
+        {
+            "type": "Linear",
+            "params": {
+                "training": "True",
+                "in_features": "128",
+                "out_features": "128"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y...",
+            "name": "encoder.layers.1.cross_attention.value_projection"
+        },
+        {
+            "type": "Linear",
+            "params": {
+                "training": "True",
+                "in_features": "128",
+                "out_features": "128"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y...",
+            "name": "encoder.layers.1.cross_attention.out_projection"
+        },
+        {
+            "type": "Conv1d",
+            "params": {
+                "training": "True",
+                "in_channels": "128",
+                "out_channels": "256",
+                "transposed": "False",
+                "groups": "1",
+                "padding_mode": "zeros"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Conv1d(_ConvNd):\n    __doc__ = (\n        r\"\"\"Applies a 1D convolution over an input signal com...",
+            "name": "encoder.layers.1.conv1"
+        },
+        {
+            "type": "Conv1d",
+            "params": {
+                "training": "True",
+                "in_channels": "256",
+                "out_channels": "128",
+                "transposed": "False",
+                "groups": "1",
+                "padding_mode": "zeros"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Conv1d(_ConvNd):\n    __doc__ = (\n        r\"\"\"Applies a 1D convolution over an input signal com...",
+            "name": "encoder.layers.1.conv2"
+        },
+        {
+            "type": "LayerNorm",
+            "params": {
+                "training": "True",
+                "eps": "1e-05",
+                "elementwise_affine": "True"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class LayerNorm(Module):\n    r\"\"\"Applies Layer Normalization over a mini-batch of inputs.\n\n    This ...",
+            "name": "encoder.layers.1.norm1"
+        },
+        {
+            "type": "LayerNorm",
+            "params": {
+                "training": "True",
+                "eps": "1e-05",
+                "elementwise_affine": "True"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class LayerNorm(Module):\n    r\"\"\"Applies Layer Normalization over a mini-batch of inputs.\n\n    This ...",
+            "name": "encoder.layers.1.norm2"
+        },
+        {
+            "type": "LayerNorm",
+            "params": {
+                "training": "True",
+                "eps": "1e-05",
+                "elementwise_affine": "True"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class LayerNorm(Module):\n    r\"\"\"Applies Layer Normalization over a mini-batch of inputs.\n\n    This ...",
+            "name": "encoder.layers.1.norm3"
+        },
+        {
+            "type": "Dropout",
+            "params": {
+                "training": "True",
+                "p": "0.1",
+                "inplace": "False"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class Dropout(_DropoutNd):\n    r\"\"\"During training, randomly zeroes some of the elements of the inpu...",
+            "name": "encoder.layers.1.dropout"
+        },
+        {
+            "type": "LayerNorm",
+            "params": {
+                "training": "True",
+                "eps": "1e-05",
+                "elementwise_affine": "True"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class LayerNorm(Module):\n    r\"\"\"Applies Layer Normalization over a mini-batch of inputs.\n\n    This ...",
+            "name": "encoder.norm"
+        },
+        {
+            "type": "FlattenHead",
+            "params": {
+                "training": "True",
+                "n_vars": "7"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class FlattenHead(nn.Module):\n    def __init__(self, n_vars, nf, target_window, head_dropout=0):\n   ...",
+            "name": "head"
+        },
+        {
+            "type": "Flatten",
+            "params": {
+                "training": "True",
+                "start_dim": "-2",
+                "end_dim": "-1"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class Flatten(Module):\n    r\"\"\"\n    Flattens a contiguous range of dims into a tensor.\n\n    For use ...",
+            "name": "head.flatten"
+        },
+        {
+            "type": "Linear",
+            "params": {
+                "training": "True",
+                "in_features": "896",
+                "out_features": "96"
+            },
+            "has_weight": true,
+            "has_bias": true,
+            "source": "class Linear(Module):\n    r\"\"\"Applies an affine linear transformation to the incoming data: :math:`y...",
+            "name": "head.linear"
+        },
+        {
+            "type": "Dropout",
+            "params": {
+                "training": "True",
+                "p": "0.1",
+                "inplace": "False"
+            },
+            "has_weight": false,
+            "has_bias": false,
+            "source": "class Dropout(_DropoutNd):\n    r\"\"\"During training, randomly zeroes some of the elements of the inpu...",
+            "name": "head.dropout"
+        }
+    ]
+}
