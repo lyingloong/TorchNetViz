@@ -4,7 +4,7 @@ import base64
 import inspect
 import os
 from parser.model_parser import parse_model, save_model_structure
-from visualizer.graph_visualizer import visualize_structure
+from visualizer.graph_visualizer import visualize_structure_v1, visualize_structure_v2
 import json
 from typing import Optional, Dict, Tuple, Union, List, Any
 from models.custom_layers import *
@@ -175,5 +175,9 @@ if __name__ == "__main__":
 
     result = parse_model(model, input_shapes, dim_sizes=input_dim_sizes, ndims=args.ndims)
     save_model_structure(result, f"output/{args.model}/{args.model}.json")
-    visualize_structure(result["structure"], result["connections"],
-                        inputs=result["inputs"], output_path=f"output/{args.model}/{args.model}.html")
+    visualize_structure_v1(result["structure"], result["connections"],
+                        inputs=result["inputs"], output_path=f"output/{args.model}/{args.model}_v1.html")
+    for id, t_scale, t_k, c_weight in [(0, 6.0, 1.5, 5.0), (1, 10.0, 2.0, 8.0), (2, 15.0, 2.5, 10.0)]:
+        visualize_structure_v2(result["structure"], result["connections"],
+                            inputs=result["inputs"], output_path=f"output/{args.model}/{args.model}_v2_{id}.html",
+                            top_scale=t_scale, top_k=t_k, iterations=300, container_weight=c_weight)
