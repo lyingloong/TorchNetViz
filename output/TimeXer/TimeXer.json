@@ -674,5 +674,363 @@
             "source": "class Dropout(_DropoutNd):\n    r\"\"\"During training, randomly zeroes some of the elements of the inpu...",
             "name": "head.dropout"
         }
+    ],
+    "connections": [
+        {
+            "source": "mean",
+            "target": "detach",
+            "type": "normal"
+        },
+        {
+            "source": "detach",
+            "target": "<built-in function getitem>",
+            "type": "normal"
+        },
+        {
+            "source": "detach",
+            "target": "<built-in function sub>",
+            "type": "normal"
+        },
+        {
+            "source": "<built-in function sub>",
+            "target": "<built-in method var of type object at 0x00007FFAC3B57450>",
+            "type": "normal"
+        },
+        {
+            "source": "<built-in function sub>",
+            "target": "<built-in function itruediv>",
+            "type": "normal"
+        },
+        {
+            "source": "<built-in method var of type object at 0x00007FFAC3B57450>",
+            "target": "<built-in function add>",
+            "type": "normal"
+        },
+        {
+            "source": "<built-in function add>",
+            "target": "<built-in function getitem>",
+            "type": "normal"
+        },
+        {
+            "source": "<built-in method sqrt of type object at 0x00007FFAC3B57450>",
+            "target": "<built-in function getitem>",
+            "type": "normal"
+        },
+        {
+            "source": "<built-in method sqrt of type object at 0x00007FFAC3B57450>",
+            "target": "<built-in function itruediv>",
+            "type": "normal"
+        },
+        {
+            "source": "permute",
+            "target": "L__model___head_flatten",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___en_embedding_glb_token",
+            "target": "repeat",
+            "type": "normal"
+        },
+        {
+            "source": "repeat",
+            "target": "<built-in function add>",
+            "type": "normal"
+        },
+        {
+            "source": "unfold",
+            "target": "size",
+            "type": "normal"
+        },
+        {
+            "source": "unfold",
+            "target": "size",
+            "type": "normal"
+        },
+        {
+            "source": "unfold",
+            "target": "<built-in method reshape of type object at 0x00007FFAC3B57450>",
+            "type": "normal"
+        },
+        {
+            "source": "<built-in function mul>",
+            "target": "<built-in function add>",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___en_embedding_value_embedding",
+            "target": "<built-in function add>",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___en_embedding_position_embedding_pe",
+            "target": "<built-in function getitem>",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___en_embedding_dropout",
+            "target": "L__model___encoder_layers_0_self_attention_key_projection",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___en_embedding_dropout",
+            "target": "L__model___encoder_layers_0_self_attention_value_projection",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___en_embedding_dropout",
+            "target": "L__model___encoder_layers_0_self_attention_query_projection",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___en_embedding_dropout",
+            "target": "<built-in function add>",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___ex_embedding_dropout",
+            "target": "L__model___encoder_layers_0_cross_attention_key_projection",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___ex_embedding_dropout",
+            "target": "L__model___encoder_layers_0_cross_attention_value_projection",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___ex_embedding_dropout",
+            "target": "L__model___encoder_layers_1_cross_attention_key_projection",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___ex_embedding_dropout",
+            "target": "L__model___encoder_layers_1_cross_attention_value_projection",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___ex_embedding_dropout",
+            "target": "L__model___encoder_layers_0_self_attention_query_projection",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___ex_embedding_dropout",
+            "target": "L__model___encoder_layers_1_self_attention_query_projection",
+            "type": "normal"
+        },
+        {
+            "source": "view",
+            "target": "L__model___encoder_layers_1_cross_attention_out_projection",
+            "type": "normal"
+        },
+        {
+            "source": "view",
+            "target": "L__model___encoder_layers_1_self_attention_query_projection",
+            "type": "normal"
+        },
+        {
+            "source": "<function einsum at 0x000001690CB15E40>",
+            "target": "contiguous",
+            "type": "normal"
+        },
+        {
+            "source": "<built-in method softmax of type object at 0x00007FFAC3B57450>",
+            "target": "L__model___encoder_layers_1_cross_attention_inner_attention_dropout",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___encoder_layers_0_self_attention_inner_attention_dropout",
+            "target": "<function einsum at 0x000001690CB15E40>",
+            "type": "normal"
+        },
+        {
+            "source": "contiguous",
+            "target": "L__model___encoder_layers_1_cross_attention_out_projection",
+            "type": "skip"
+        },
+        {
+            "source": "contiguous",
+            "target": "L__model___encoder_layers_1_self_attention_query_projection",
+            "type": "skip"
+        },
+        {
+            "source": "contiguous",
+            "target": "view",
+            "type": "normal"
+        },
+        {
+            "source": "unsqueeze",
+            "target": "repeat",
+            "type": "normal"
+        },
+        {
+            "source": "<built-in method reshape of type object at 0x00007FFAC3B57450>",
+            "target": "unsqueeze",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___encoder_layers_0_dropout",
+            "target": "<built-in function add>",
+            "type": "normal"
+        },
+        {
+            "source": "<built-in method cat of type object at 0x00007FFAC3B57450>",
+            "target": "transpose",
+            "type": "normal"
+        },
+        {
+            "source": "<built-in method cat of type object at 0x00007FFAC3B57450>",
+            "target": "<built-in function add>",
+            "type": "normal"
+        },
+        {
+            "source": "transpose",
+            "target": "L__model___encoder_layers_1_dropout",
+            "type": "normal"
+        },
+        {
+            "source": "<built-in function gelu>",
+            "target": "L__model___encoder_layers_1_dropout",
+            "type": "normal"
+        },
+        {
+            "source": "arg0",
+            "target": "mean",
+            "type": "normal"
+        },
+        {
+            "source": "arg0",
+            "target": "<built-in function sub>",
+            "type": "normal"
+        },
+        {
+            "source": "arg1",
+            "target": "permute",
+            "type": "normal"
+        },
+        {
+            "source": "<built-in function itruediv>",
+            "target": "permute",
+            "type": "normal"
+        },
+        {
+            "source": "<built-in function itruediv>",
+            "target": "permute",
+            "type": "normal"
+        },
+        {
+            "source": "size",
+            "target": "<built-in function getitem>",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___ex_embedding_value_embedding",
+            "target": "L__model___ex_embedding_dropout",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___encoder_layers_0_self_attention_query_projection",
+            "target": "view",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___encoder_layers_0_norm1",
+            "target": "<built-in function getitem>",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___encoder_layers_0_norm1",
+            "target": "<built-in function getitem>",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___encoder_layers_0_cross_attention_inner_attention_dropout",
+            "target": "<function einsum at 0x000001690CB15E40>",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___encoder_layers_0_norm2",
+            "target": "<built-in method cat of type object at 0x00007FFAC3B57450>",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___encoder_layers_0_norm3",
+            "target": "L__model___encoder_layers_1_self_attention_key_projection",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___encoder_layers_0_norm3",
+            "target": "L__model___encoder_layers_1_self_attention_value_projection",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___encoder_layers_0_norm3",
+            "target": "L__model___encoder_layers_1_self_attention_query_projection",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___encoder_layers_0_norm3",
+            "target": "<built-in function add>",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___encoder_layers_1_self_attention_query_projection",
+            "target": "view",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___encoder_layers_1_self_attention_inner_attention_dropout",
+            "target": "<function einsum at 0x000001690CB15E40>",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___encoder_layers_1_norm1",
+            "target": "<built-in function getitem>",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___encoder_layers_1_norm1",
+            "target": "<built-in function getitem>",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___encoder_layers_1_cross_attention_inner_attention_dropout",
+            "target": "<function einsum at 0x000001690CB15E40>",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___encoder_layers_1_dropout",
+            "target": "<built-in function add>",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___encoder_layers_1_norm3",
+            "target": "L__model___encoder_norm",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___encoder_norm",
+            "target": "<built-in method reshape of type object at 0x00007FFAC3B57450>",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___head_flatten",
+            "target": "L__model___head_linear",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___head_linear",
+            "target": "L__model___head_dropout",
+            "type": "normal"
+        },
+        {
+            "source": "L__model___head_dropout",
+            "target": "permute",
+            "type": "normal"
+        }
+    ],
+    "inputs": [
+        "l_args_0_",
+        "l_args_1_",
+        "arg2",
+        "arg3"
     ]
 }

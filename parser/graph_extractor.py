@@ -76,14 +76,17 @@ def get_model_connections(traced_model) -> List[Dict[str, Union[str, None]]]:
         # Rebuild args
         new_args = []
         for arg in node.args:
-            if isinstance(arg, Node):
-                new_args += [arg]
-            elif isinstance(arg, tuple):
-                for a in arg:
-                    if not isinstance(a, Node):
-                        raise
-                    new_args += [a]
-            else:
+            try:
+                if isinstance(arg, Node):
+                    new_args += [arg]
+                elif isinstance(arg, tuple):
+                    for a in arg:
+                        if not isinstance(a, Node):
+                            raise
+                        new_args += [a]
+                else:
+                    raise
+            except Exception as e:
                 logger.debug(f"Passing arg \"{arg}\" in node \"{node.name}\" with args {node.args}")
         node.args = tuple(new_args)
     for node in module_nodes.values():

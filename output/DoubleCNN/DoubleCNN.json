@@ -6,8 +6,8 @@
                 "training": "False",
                 "eps": "1e-05",
                 "num_features": "7",
-                "mean": "tensor([[[-0.0235]]])",
-                "std": "tensor([[[1.0097]]])"
+                "mean": "tensor([[[-0.1027]]])",
+                "std": "tensor([[[0.9640]]])"
             },
             "has_weight": false,
             "has_bias": false,
@@ -184,7 +184,7 @@
             "type": "normal"
         },
         {
-            "source": "<built-in method cat of type object at 0x00007FFC56BB7450>",
+            "source": "<built-in method cat of type object at 0x00007FFAC3B57450>",
             "target": "mlp.0",
             "type": "normal"
         },

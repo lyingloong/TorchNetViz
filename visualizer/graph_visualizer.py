@@ -1,12 +1,16 @@
+import logging
 import itertools
 import math
 import os
 import networkx as nx
 import plotly.graph_objects as go
-from typing import Optional, Union
+from typing import Optional, Union, Tuple, Dict, List, Any
+
+from networkx import DiGraph
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
+logger = logging.getLogger(__name__)
 
 def visualize_structure(
     structure: list[dict[str, str]],
@@ -19,7 +23,7 @@ def visualize_structure(
     Visualize model architecture with clear layered layout, skip connections, and interactivity.
     """
 
-    def _create_nodes(structure: list[dict[str, str]]) -> tuple[nx.DiGraph, dict]:
+    def _create_nodes(structure: list[dict[str, str]]) -> DiGraph:
         G = nx.DiGraph()
         layer_types = {}
         for layer in structure:
@@ -27,39 +31,35 @@ def visualize_structure(
             ltype = layer.get('type', 'Unknown')
             G.add_node(name, layer_type=ltype)
             layer_types[name] = ltype
-        return G, layer_types
+        return G
 
-    G, layer_types = _create_nodes(structure)
+    G = _create_nodes(structure)
 
-    def _classify_edges(G: nx.DiGraph, connections: list[dict[str, Union[str, None]]]) -> tuple[list, list, list]:
-        normal_edges, skip_edges, output_edges = [], [], []
+    def _classify_edges(G: nx.DiGraph, connections: list[dict[str, Union[str, None]]]) -> tuple[
+        DiGraph, dict[str, list[Any]]]:
+        edge_dictionary = {'normal': [], 'skip': [], 'output': []}
         for conn in connections:
             src, tgt = conn['source'], conn['target']
-            etype = conn.get('type', None)
-            if etype == 'skip':
-                skip_edges.append((src, tgt))
-            elif etype == 'output':
-                output_edges.append((src, tgt))
-            else:
-                normal_edges.append((src, tgt))
+            etype = conn.get('type', 'normal')
+            edge_dictionary.setdefault(etype, edge_dictionary['normal']).append((src, tgt))
             G.add_edge(src, tgt)
-        return normal_edges, skip_edges, output_edges
+        return G, edge_dictionary
+    
+    G, edge_dict = _classify_edges(G, connections)
 
-    normal_edges, skip_edges, output_edges = _classify_edges(G, connections)
-
-    def _add_input_nodes(G: nx.DiGraph, inputs: Optional[list[str]], structure: list[dict[str, str]],
-                         normal_edges: list) -> list:
+    def _add_input_nodes(G: nx.DiGraph, inputs: Optional[list[str]]) -> nx.DiGraph:
         if inputs:
             for inp in inputs:
                 G.add_node(inp, layer_type='Input')
-                first_node = structure[0]['name']
-                G.add_edge(inp, first_node)
-                normal_edges.insert(0, (inp, first_node))
-        return normal_edges
+        return G
+    def _add_output_nodes(G: nx.DiGraph, outputs: Optional[list[str]]) -> nx.DiGraph:
+        if outputs:
+            for out in outputs:
+                G.add_node(out, layer_type='Output')
+        return G
 
-    normal_edges = _add_input_nodes(G, inputs, structure, normal_edges)
+    G = _add_input_nodes(G, inputs)
 
-    # 拓扑排序 + 分层布局
     def topological_layered_layout(G: nx.DiGraph) -> dict:
         layers = {}
         for node in nx.topological_sort(G):
@@ -84,8 +84,44 @@ def visualize_structure(
                 pos[node] = (x, y)
         return pos
 
+    if not nx.is_directed_acyclic_graph(G):
+        logger.info(f"Graph is not a DAG. Cycles found: {list(nx.simple_cycles(G))}")
+        # 合并强连通组件为超级节点
+        scc = list(nx.strongly_connected_components(G))
+        mapping = {}
+        component_info = {}
+        for i, comp in enumerate(scc):
+            if len(comp) > 1:
+                comp_id = f"Component_{i}"
+                component_info[comp_id] = list(comp)
+                for node in comp:
+                    mapping[node] = f"Component_{i}"
+                logger.debug(f"Contracting component node {comp_id}, details: {component_info[comp_id]}")
+        G_contracted = nx.DiGraph()
+
+        # 添加组件节点和非组件节点
+        for node, data in G.nodes(data=True):
+            if node in mapping:
+                comp_id = mapping[node]
+                G_contracted.add_node(comp_id, layer_type="Component", details=component_info[comp_id])
+            else:
+                G_contracted.add_node(node, **data)
+
+        # 添加边（跳过内部边）
+        added_edges = set()
+        for u, v in G.edges():
+            src = mapping.get(u, u)
+            tgt = mapping.get(v, v)
+            if src != tgt and (src, tgt) not in added_edges:
+                G_contracted.add_edge(src, tgt)
+                added_edges.add((src, tgt))
+
+        G = G_contracted
+    else:
+        logger.info("Graph is a DAG. No need to contract components.")
+
     pos = topological_layered_layout(G)
-    print(f"Node positions computed: {pos}")
+    logger.info(f"Node positions computed: {pos}")
 
     import random
     random.seed(42)
@@ -97,12 +133,15 @@ def visualize_structure(
     color_cycle = itertools.cycle(palette)
     all_types = set(nx.get_node_attributes(G, 'layer_type').values())
     type_to_color = {lt: next(color_cycle) for lt in sorted(all_types)}
-    type_to_color.update({"Unknown": "#7f7f7f"})
+    type_to_color.update({"Unknown": "#7f7f7f", "Component": "#a0522d"})
 
     # --- 边绘制 ---
     def _create_edge_trace(edge_list, dash_style):
         x, y = [], []
         for u, v in edge_list:
+            if u not in pos or v not in pos:
+                logger.warning(f"Skipping edge {u} -> {v} due to missing node position.")
+                continue
             x += [pos[u][0], pos[v][0], None]
             y += [pos[u][1], pos[v][1], None]
         return go.Scatter(
@@ -110,20 +149,30 @@ def visualize_structure(
             line=dict(width=2, dash=dash_style),
             hoverinfo='none'
         )
+    
+    logger.debug(f"Nodes in graph: {G.nodes}")
+    logger.debug(f"Edges classified: normal {edge_dict['normal']} skip {edge_dict['skip']} output {edge_dict['output']}")
 
     edge_traces = [
-        _create_edge_trace(normal_edges, 'solid'),
-        _create_edge_trace(skip_edges, 'dash'),
-        _create_edge_trace(output_edges, 'dot')
+        _create_edge_trace(edge_dict['normal'], 'solid'),
+        _create_edge_trace(edge_dict['skip'], 'dash'),
+        _create_edge_trace(edge_dict['output'], 'dot')
     ]
 
     # --- 节点绘制 ---
-    node_x, node_y, node_text, node_color = [], [], [], []
+    node_x, node_y, node_text, node_color, node_customdata = [], [], [], [], []
+
     for node, data in G.nodes(data=True):
         node_x.append(pos[node][0])
         node_y.append(pos[node][1])
-        label = f"{node} ({data.get('layer_type', 'Unknown')})"
+        if data.get("layer_type") == "Component":
+            label = f"{node} (Composite)"
+            details = ", ".join(sorted(data.get("details", [])))
+        else:
+            label = f"{node} ({data.get('layer_type', 'Unknown')})"
+            details = ""
         node_text.append(label)
+        node_customdata.append(details)
         node_color.append(type_to_color[data.get('layer_type', 'Unknown')])
 
     node_trace = go.Scatter(
@@ -133,6 +182,8 @@ def visualize_structure(
         text=node_text,
         textposition='top center',
         hoverinfo='text',
+        customdata=node_customdata,
+        hovertemplate='<b>%{text}</b><br><i>Details:</i><br>%{customdata}<extra></extra>',
         marker=dict(
             color=node_color,
             size=24,
