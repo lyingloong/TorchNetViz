@@ -60,7 +60,20 @@ def visualize_structure(
 
     G = _add_input_nodes(G, inputs)
 
-    def topological_layered_layout(G: nx.DiGraph) -> dict:
+    def _build_hierarchy(structure: list[dict[str, Any]]) -> dict[str, dict]:
+        """构建模块层次结构字典"""
+        hierarchy = {}
+        for node in structure:
+            if 'submodules' in node:
+                hierarchy[node['name']] = {
+                    'children': node['submodules'],
+                    'depth': 0
+                }
+        return hierarchy
+
+    hierarchy = _build_hierarchy(structure)
+
+    def topological_layered_layout(G: nx.DiGraph, hierarchy: dict) -> dict:
         layers = {}
         for node in nx.topological_sort(G):
             preds = list(G.predecessors(node))
@@ -69,18 +82,27 @@ def visualize_structure(
             else:
                 layers[node] = max(layers[p] for p in preds) + 1
 
-        # 分组层
+        # 嵌套处理：子节点在父节点下一层
+        for parent, info in hierarchy.items():
+            if parent not in layers:
+                continue
+            parent_layer = layers[parent]
+            for child in info['children']:
+                if child in layers:
+                    layers[child] = max(layers[child], parent_layer + 1)
+
+        # 分组
         layer_nodes = {}
         for node, layer in layers.items():
             layer_nodes.setdefault(layer, []).append(node)
 
-        # 排布坐标：每层 y 固定，x 均匀
+        # 坐标计算
         pos = {}
         for y_level, nodes in layer_nodes.items():
             num = len(nodes)
             for i, node in enumerate(nodes):
                 x = i - num / 2
-                y = -y_level  # y 从上往下
+                y = -y_level
                 pos[node] = (x, y)
         return pos
 
@@ -120,7 +142,7 @@ def visualize_structure(
     else:
         logger.info("Graph is a DAG. No need to contract components.")
 
-    pos = topological_layered_layout(G)
+    pos = topological_layered_layout(G, hierarchy)
     logger.info(f"Node positions computed: {pos}")
 
     import random
@@ -201,6 +223,31 @@ def visualize_structure(
         plot_bgcolor='white',
         margin=dict(l=20, r=20, t=20, b=20),
     )
+
+    # 在fig上绘制父模块分组框
+    for parent, info in hierarchy.items():
+        children = [c for c in info['children'] if c in pos]
+        if not children or parent not in pos:
+            continue
+
+        x_coords = [pos[c][0] for c in children]
+        y_coords = [pos[c][1] for c in children]
+
+        fig.add_shape(
+            type="rect",
+            x0=min(x_coords) - 0.3, y0=min(y_coords) - 0.2,
+            x1=max(x_coords) + 0.3, y1=max(y_coords) + 0.2,
+            line=dict(color=type_to_color.get('Sequential', '#999'), width=2),
+            fillcolor="rgba(200,200,200,0.05)",
+            layer="below"
+        )
+
+        fig.add_annotation(
+            x=pos[parent][0], y=pos[parent][1] + 0.5,
+            text=f"Sequential: {parent}",
+            showarrow=False,
+            font=dict(size=10, color=type_to_color.get('Sequential', '#999'))
+        )
 
     # --- 保存或显示 ---
     if output_path:
