@@ -30,7 +30,15 @@ def visualize_structure_v2(
         for layer in structure:
             name = layer['name']
             ltype = layer.get('type', 'Unknown')
-            G.add_node(name, layer_type=ltype)
+
+            node_attrs = {
+                'layer_type': ltype
+            }
+            for key, value in layer.items():
+                if key not in ('name', 'type'):
+                    node_attrs[key] = value
+
+            G.add_node(name, **node_attrs)
             if 'submodules' in layer:
                 hierarchy[name] = {
                     'children': layer['submodules'],
@@ -101,40 +109,36 @@ def visualize_structure_v2(
     isolated_nodes = [n for n in nx.isolates(G)
                       # if G.nodes[n].get('layer_type') != 'Input'
                       ]
-
-    # 递归删除孤立容器节点及其子节点
-    def remove_isolated_container(container):
-        if container in hierarchy:
-            # 先删除所有子节点
-            for child in hierarchy[container]['children']:
-                if child in G:
-                    G.remove_node(child)
-            # 再删除容器本身
-            G.remove_node(container)
-            # 更新层次结构
-            del hierarchy[container]
-
+    logger.debug(f"Isolated nodes: {isolated_nodes}")
+    # # 递归删除孤立容器节点及其子节点
+    # def remove_isolated_container(container):
+    #     if container in hierarchy:
+    #         # 先删除所有子节点
+    #         for child in hierarchy[container]['children']:
+    #             if child in G:
+    #                 G.remove_node(child)
+    #         # 再删除容器本身
+    #         G.remove_node(container)
+    #         # 更新层次结构
+    #         del hierarchy[container]
+    #
     # 遍历所有孤立节点
     for node in list(isolated_nodes):  # 转换为list避免迭代时修改图结构
         if node not in G:
             continue
 
-        # 处理容器节点
-        if node in hierarchy:
-            remove_isolated_container(node)
         # 处理普通节点
-        else:
+        if node not in hierarchy:
             G.remove_node(node)
             # 从层次结构中删除作为子节点的情况
             for parent in hierarchy.values():
                 if node in parent['children']:
                     parent['children'].remove(node)
 
-    # 清理空容器
-    empty_containers = [k for k, v in hierarchy.items() if not v['children']]
-    for ec in empty_containers:
-        remove_isolated_container(ec)
-
+    # # 清理空容器
+    # empty_containers = [k for k, v in hierarchy.items() if not v['children']]
+    # for ec in empty_containers:
+    #     remove_isolated_container(ec)
 
     # Step 4: 布局
     def _hierarchical_layout(G: nx.DiGraph, hierarchy: dict,
@@ -326,7 +330,12 @@ def visualize_structure_v2(
             details = ", ".join(sorted(data.get("details", [])))
         else:
             label = f"{node} ({data.get('layer_type', 'Unknown')})"
-            details = ""
+            # 自动提取所有非系统属性
+            excluded_keys = {"name", "type", "layer_type", "source"}
+            details = [
+                f"{k}={v}" for k, v in sorted(data.items()) if k not in excluded_keys
+            ]
+            details = ", ".join(details)
         node_text.append(label)
         node_customdata.append(details)
         node_color.append(type_to_color[data.get('layer_type', 'Unknown')])
@@ -397,9 +406,15 @@ def visualize_structure_v1(
         for layer in structure:
             name = layer['name']
             ltype = layer.get('type', 'Unknown')
-            # if ltype == "Sequential":
-            #     continue
-            G.add_node(name, layer_type=ltype)
+
+            node_attrs = {
+                'layer_type': ltype
+            }
+            for key, value in layer.items():
+                if key not in ('name', 'type'):
+                    node_attrs[key] = value
+
+            G.add_node(name, **node_attrs)
         return G
 
     G = _create_nodes(structure)
@@ -548,7 +563,11 @@ def visualize_structure_v1(
             details = ", ".join(sorted(data.get("details", [])))
         else:
             label = f"{node} ({data.get('layer_type', 'Unknown')})"
-            details = ""
+            excluded_keys = {"name", "type", "layer_type", "source"}
+
+            # 自动提取所有非系统属性作为 details
+            details = [f"{key}={value}" for key, value in data.items() if key not in excluded_keys]
+            details = ", ".join(sorted(details))
         node_text.append(label)
         node_customdata.append(details)
         node_color.append(type_to_color[data.get('layer_type', 'Unknown')])
