@@ -1,8 +1,7 @@
 $model = "TimeXer"
 $model_file = "TimeXer"
 
-# 定义 JSON 对象
-$json_obj = @{
+$init_obj = @{
     type  = "configs"
     value = @{
         task_name  = "long_term_forecast"
@@ -31,18 +30,14 @@ $input_shapes_obj = @{
     x_mark_dec   = @(1, 128, 1)
 }
 
-# 转换为压缩 JSON 字符串（不含换行）
-$json_str = $json_obj | ConvertTo-Json -Compress -Depth 3
+$init_str = $init_obj | ConvertTo-Json -Compress -Depth 3
 $input_shapes_str = $input_shapes_obj | ConvertTo-Json -Compress -Depth 3
 
-# Base64 编码
-$encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($json_str))
+$encoded_init = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($init_str))
 $encoded_input_shapes = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($input_shapes_str))
 
-# 构造 JSON list: ["base64字符串"]
-$arg_string = "[`'$encoded`']"
+$arg_string = "[`'$encoded_init`']"
 
-# 执行 Python 脚本，注意 --args 参数用引号括住
 python main.py `
     --model "$model" `
     --model_file "$model_file" `

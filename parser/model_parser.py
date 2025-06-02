@@ -15,7 +15,7 @@ from .graph_extractor import get_model_connections, get_placeholders
 
 # 配置日志记录器
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -83,7 +83,7 @@ def save_model_structure(result: Dict[str, Any], filepath: str = "output/model_s
     Save parsed model structure to JSON file.
 
     Args:
-        result (Dict[str, Any]): Output from [parse_model](file://D:\Code\TorchNetViz\parser\parser.py#L13-L42).
+        result (Dict[str, Any]): Output from [parse_model](file:TorchNetViz\parser\parser.py).
         filepath (str, optional): Output path. Defaults to "output/model_structure.json".
     """
     for item in result.get("structure", []) + result.get("connections", []):

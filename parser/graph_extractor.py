@@ -38,7 +38,6 @@ def get_model_connections(traced_model) -> List[Dict[str, Union[str, None]]]:
 
     # First pass: group all constant-like nodes by their base name
     for node in traced_model.graph.nodes:
-        # _print_node_info(node)
         match = re.match(r'([a-zA-Z_]+)(\d+)(?:_(\d+))?', node.name)
         if match:
             base_name, main_id, _ = match.groups()
@@ -72,7 +71,6 @@ def get_model_connections(traced_model) -> List[Dict[str, Union[str, None]]]:
 
     # Third pass: redirect constant-args of other nodes to base node
     for node in module_nodes.values():
-        # _print_node_info(node)
         # Rebuild args
         new_args = []
         for arg in node.args:

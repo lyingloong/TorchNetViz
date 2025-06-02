@@ -23,8 +23,26 @@ def visualize_structure_v2(
     iterations: int = 200,
     container_weight: float = 5.0
 ) -> go.Figure:
+    """
+        Visualize a hierarchical neural network model structure with nested containers.
+
+        Args:
+            structure (List[Dict]): List of node definitions.
+            connections (List[Dict]): List of edge definitions.
+            inputs (Optional[List[str]]): Input nodes to mark explicitly.
+            output_path (Optional[str]): File path to save the visualization.
+            showgrid (bool): Whether to show grid in background.
+            top_scale (float): Global layout scale factor.
+            top_k (float): Repulsion strength in force-directed layout.
+            iterations (int): Number of iterations for spring layout algorithm.
+            container_weight (float): Weight applied to container nodes in layout calculation.
+
+        Returns:
+            go.Figure: Interactive Plotly figure object.
+    """
     # Step 1: 构建节点图与层次关系
     def _create_nodes(structure: list[dict[str, str]]) -> DiGraph:
+        """Build graph from structure and extract hierarchy."""
         G = nx.DiGraph()
         hierarchy = {}
         for layer in structure:
@@ -47,6 +65,7 @@ def visualize_structure_v2(
         return G, hierarchy
 
     def _add_input_nodes(G: nx.DiGraph, inputs: Optional[list[str]]) -> nx.DiGraph:
+        """Add input nodes to the graph."""
         if inputs:
             for inp in inputs:
                 G.add_node(inp, layer_type='Input')
@@ -58,6 +77,7 @@ def visualize_structure_v2(
     # Step 2: 加边
     def _classify_edges(G: nx.DiGraph, connections: list[dict[str, Union[str, None]]]) -> tuple[
         DiGraph, dict[str, list[Any]]]:
+        """Classify edges by type and add them to the graph."""
         edge_dictionary = {'normal': [], 'skip': [], 'output': []}
         for conn in connections:
             src, tgt = conn['source'], conn['target']
@@ -71,7 +91,6 @@ def visualize_structure_v2(
     # Step 3: 处理强连通部件，删除孤立节点
     if not nx.is_directed_acyclic_graph(G):
         logger.info(f"Graph is not a DAG. Cycles found: {list(nx.simple_cycles(G))}")
-        # 合并强连通组件为超级节点
         scc = list(nx.strongly_connected_components(G))
         mapping = {}
         component_info = {}
@@ -84,7 +103,7 @@ def visualize_structure_v2(
                 logger.debug(f"Contracting component node {comp_id}, details: {component_info[comp_id]}")
         G_contracted = nx.DiGraph()
 
-        # 添加组件节点和非组件节点
+        # Add non-component nodes and contracted components
         for node, data in G.nodes(data=True):
             if node in mapping:
                 comp_id = mapping[node]
@@ -92,7 +111,6 @@ def visualize_structure_v2(
             else:
                 G_contracted.add_node(node, **data)
 
-        # 添加边（跳过内部边）
         added_edges = set()
         for u, v in G.edges():
             src = mapping.get(u, u)
@@ -105,46 +123,26 @@ def visualize_structure_v2(
     else:
         logger.info("Graph is a DAG. No need to contract components.")
 
-    # 获取孤立节点列表
+    # Remove isolated nodes
     isolated_nodes = [n for n in nx.isolates(G)
                       # if G.nodes[n].get('layer_type') != 'Input'
                       ]
     logger.debug(f"Isolated nodes: {isolated_nodes}")
-    # # 递归删除孤立容器节点及其子节点
-    # def remove_isolated_container(container):
-    #     if container in hierarchy:
-    #         # 先删除所有子节点
-    #         for child in hierarchy[container]['children']:
-    #             if child in G:
-    #                 G.remove_node(child)
-    #         # 再删除容器本身
-    #         G.remove_node(container)
-    #         # 更新层次结构
-    #         del hierarchy[container]
-    #
-    # 遍历所有孤立节点
-    for node in list(isolated_nodes):  # 转换为list避免迭代时修改图结构
+
+    for node in list(isolated_nodes):
         if node not in G:
             continue
-
-        # 处理普通节点
         if node not in hierarchy:
             G.remove_node(node)
-            # 从层次结构中删除作为子节点的情况
             for parent in hierarchy.values():
                 if node in parent['children']:
                     parent['children'].remove(node)
-
-    # # 清理空容器
-    # empty_containers = [k for k, v in hierarchy.items() if not v['children']]
-    # for ec in empty_containers:
-    #     remove_isolated_container(ec)
 
     # Step 4: 布局
     def _hierarchical_layout(G: nx.DiGraph, hierarchy: dict,
                              scale: float = 8.0, k: float = 1.2, iterations: int = 200, node_weight: float=1.0
                              ) -> Tuple[dict, dict]:
-        """分层嵌套布局算法（改进版）"""
+        """Hierarchical layout with nested containers using force-directed placement."""
         from networkx import spring_layout
         import random
 
@@ -330,7 +328,6 @@ def visualize_structure_v2(
             details = ", ".join(sorted(data.get("details", [])))
         else:
             label = f"{node} ({data.get('layer_type', 'Unknown')})"
-            # 自动提取所有非系统属性
             excluded_keys = {"name", "type", "layer_type", "source"}
             details = [
                 f"{k}={v}" for k, v in sorted(data.items()) if k not in excluded_keys
@@ -401,6 +398,19 @@ def visualize_structure_v1(
         output_path: Optional[str] = None,
         showgrid: bool = False
 ) -> go.Figure:
+    """
+       Legacy visualizer using topological sorting and layered layout.
+
+       Args:
+           structure (List[Dict]): Model structure definition.
+           connections (List[Dict]): Connection definitions.
+           inputs (Optional[List[str]]): Input node names.
+           output_path (Optional[str]): Output file path.
+           showgrid (bool): Whether to display axis grid.
+
+       Returns:
+           go.Figure: Interactive Plotly figure.
+    """
     def _create_nodes(structure: list[dict[str, str]]) -> DiGraph:
         G = nx.DiGraph()
         for layer in structure:
@@ -439,18 +449,12 @@ def visualize_structure_v1(
 
     G = _add_input_nodes(G, inputs)
 
-    # 删除孤立节点
-    isolated_nodes = [
-        n for n in nx.isolates(G)
-        # if G.nodes[n].get('layer_type') != 'Input'
-    ]
-
-    # 删除孤立节点
+    # Remove isolated nodes
+    isolated_nodes = [n for n in nx.isolates(G)]
     for node in isolated_nodes:
         G.remove_node(node)
         logger.info(f"Removed isolated node: {node}")
 
-    # 拓扑排序 + 分层布局
     def topological_layered_layout(G: nx.DiGraph) -> dict:
         layers = {}
         for node in nx.topological_sort(G):
@@ -460,25 +464,22 @@ def visualize_structure_v1(
             else:
                 layers[node] = max(layers[p] for p in preds) + 1
 
-        # 分组层
         layer_nodes = {}
         for node, layer in layers.items():
             layer_nodes.setdefault(layer, []).append(node)
 
-        # 排布坐标：每层 y 固定，x 均匀
         pos = {}
         for y_level, nodes in layer_nodes.items():
             num = len(nodes)
             for i, node in enumerate(nodes):
                 x = i - num / 2
-                y = -y_level  # y 从上往下
+                y = -y_level
                 pos[node] = (x, y)
         return pos
 
-
+    # Contract strongly connected components
     if not nx.is_directed_acyclic_graph(G):
         logger.info(f"Graph is not a DAG. Cycles found: {list(nx.simple_cycles(G))}")
-        # 合并强连通组件为超级节点
         scc = list(nx.strongly_connected_components(G))
         mapping = {}
         component_info = {}
@@ -491,7 +492,6 @@ def visualize_structure_v1(
                 logger.debug(f"Contracting component node {comp_id}, details: {component_info[comp_id]}")
         G_contracted = nx.DiGraph()
 
-        # 添加组件节点和非组件节点
         for node, data in G.nodes(data=True):
             if node in mapping:
                 comp_id = mapping[node]
@@ -499,7 +499,6 @@ def visualize_structure_v1(
             else:
                 G_contracted.add_node(node, **data)
 
-        # 添加边（跳过内部边）
         added_edges = set()
         for u, v in G.edges():
             src = mapping.get(u, u)
@@ -517,6 +516,7 @@ def visualize_structure_v1(
 
     import random
     random.seed(42)
+    # Color coding
     palette = [
         "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
         "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
@@ -527,7 +527,7 @@ def visualize_structure_v1(
     type_to_color = {lt: next(color_cycle) for lt in sorted(all_types)}
     type_to_color.update({"Unknown": "#7f7f7f", "Component": "#a0522d"})
 
-    # --- 边绘制 ---
+    # Edge drawing
     def _create_edge_trace(edge_list, dash_style):
         x, y = [], []
         for u, v in edge_list:
@@ -552,7 +552,7 @@ def visualize_structure_v1(
         _create_edge_trace(edge_dict['output'], 'dot')
     ]
 
-    # --- 节点绘制 ---
+    # Node drawing
     node_x, node_y, node_text, node_color, node_customdata = [], [], [], [], []
 
     for node, data in G.nodes(data=True):
@@ -564,8 +564,6 @@ def visualize_structure_v1(
         else:
             label = f"{node} ({data.get('layer_type', 'Unknown')})"
             excluded_keys = {"name", "type", "layer_type", "source"}
-
-            # 自动提取所有非系统属性作为 details
             details = [f"{key}={value}" for key, value in data.items() if key not in excluded_keys]
             details = ", ".join(sorted(details))
         node_text.append(label)
@@ -589,7 +587,6 @@ def visualize_structure_v1(
         )
     )
 
-    # --- 布局绘制 ---
     fig = go.Figure(data=edge_traces + [node_trace])
     fig.update_layout(
         showlegend=False,
@@ -599,7 +596,6 @@ def visualize_structure_v1(
         margin=dict(l=20, r=20, t=20, b=20),
     )
 
-    # --- 保存或显示 ---
     if output_path:
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         fig.write_html(output_path)

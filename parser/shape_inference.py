@@ -24,6 +24,18 @@ def get_input_shapes(
     ndims: int = 3,
     dim_sizes: Optional[List[int]] = None,
 ) -> Dict[str, Tuple[int, ...]]:
+    """
+        Infer input tensor shapes for a PyTorch model by trial and error.
+
+        Args:
+            model (Union[nn.Module, ScriptModule]): The model to analyze.
+            max_args (int): Maximum number of tensor inputs allowed.
+            ndims (int): Maximum number of dimensions to try per tensor input.
+            dim_sizes (Optional[List[int]]): Candidate dimension sizes to test.
+
+        Returns:
+            Dict[str, Tuple[int, ...]]: A dictionary mapping argument names to their inferred shapes.
+    """
     input_shapes: Dict[str, Tuple[int, ...]] = {}
 
     if isinstance(model, ScriptModule):
@@ -93,15 +105,14 @@ def get_input_shapes(
         if dim_sizes is None:
             dim_sizes = [1, 2, 8, 16, 32, 64, 128, 256]
 
-        # ---------- 生成候选形状 ----------
         def generate_candidate_shapes(ndims: int, min_required_dims: int) -> List[Tuple[int, ...]]:
+            """Generate shape combinations with varying dimensions and sizes."""
             shapes = set()
             for ndim in range(min_required_dims, ndims + 1):
                 for dims in itertools.product(dim_sizes, repeat=ndim):
                     shapes.add(dims)
             return list(shapes)
 
-        # ---------- 初始化所有输入候选 shape ----------
         def build_candidate_shapes():
             raw_shapes_map = {}
             candidate_shapes = []
@@ -118,7 +129,7 @@ def get_input_shapes(
         random.shuffle(shape_combos)
         logger.info(f"Total input shape combinations to try: {len(shape_combos)}")
 
-        # prebuild shape-map for error feedback
+        # Build lookup for similar shape combos during failure recovery
         dim_to_combos = defaultdict(list)
         for combo in shape_combos:
             for i, shape in enumerate(combo):
@@ -131,13 +142,7 @@ def get_input_shapes(
                 tensor_cache[shape] = torch.randn(shape).float()
             return tensor_cache[shape]
 
-        # ---------- 主逻辑 ----------
         def try_shape_combo(shape_combo):
-            """
-            Try one combo of input shapes.
-            :param shape_combo:
-            :return:
-            """
             thread_id = threading.get_ident()  # 获取当前线程ID
             logger.debug(f"Thread ID {thread_id} is processing combo {future_to_shape[future]}")
 
@@ -171,7 +176,6 @@ def get_input_shapes(
                     actual_dims = int(error_match_0.group(2))
 
                     similar_list = dim_to_combos.get(actual_dims, [])
-                    # randomly pick a postion
                     total = len(similar_list)
                     start = random.randint(0, max(0, total - 1))
                     similar_combos = similar_list[start:start + max_similar]
@@ -190,7 +194,6 @@ def get_input_shapes(
                     tensor_index = int(error_match_1.group(1))
                     failed_shape = shape_combo[tensor_index]
                     similar_list = dim_to_combos.get((failed_shape, tensor_index), [])
-                    # randomly pick a postion
                     total = len(similar_list)
                     start = random.randint(0, max(0, total - 1))
                     similar_combos = similar_list[start:start + max_similar]
@@ -205,9 +208,9 @@ def get_input_shapes(
 
                 return None
 
-        # ---------- 分批多线程尝试主组合 ----------
+        # Parallel evaluation using thread pool
         max_workers = min(16, os.cpu_count() * 4)
-        batch_size = 4096  # 每次尝试最多4096个组合，避免爆内存
+        batch_size = 4096
         result = None
 
         for i in range(0, len(shape_combos), batch_size):
@@ -240,7 +243,7 @@ def get_input_shapes(
             if result:
                 break
 
-        # ---------- 延后组合重试 ----------
+        # Final fallback: retry postponed combinations
         if not result:
             logger.info("Retrying postponed shape combinations")
             for shape_combo in list(postponed_combos):
