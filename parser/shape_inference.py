@@ -1,22 +1,41 @@
+import random
+import re
+import threading
+import warnings
+from collections import defaultdict
+from threading import Lock, RLock
+
 import torch
 import itertools
 import inspect
-import numpy as np
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List, Optional, Tuple, Union
 from torch import nn, Tensor
 from torch.jit import ScriptModule
-from itertools import product
 import logging
 
 logger = logging.getLogger(__name__)
+random.seed(42)
 
 def get_input_shapes(
     model: Union[nn.Module, ScriptModule],
-    max_args: int = 10,
+    max_args: int = 6,
+    ndims: int = 3,
     dim_sizes: Optional[List[int]] = None,
 ) -> Dict[str, Tuple[int, ...]]:
+    """
+        Infer input tensor shapes for a PyTorch model by trial and error.
+
+        Args:
+            model (Union[nn.Module, ScriptModule]): The model to analyze.
+            max_args (int): Maximum number of tensor inputs allowed.
+            ndims (int): Maximum number of dimensions to try per tensor input.
+            dim_sizes (Optional[List[int]]): Candidate dimension sizes to test.
+
+        Returns:
+            Dict[str, Tuple[int, ...]]: A dictionary mapping argument names to their inferred shapes.
+    """
     input_shapes: Dict[str, Tuple[int, ...]] = {}
 
     if isinstance(model, ScriptModule):
@@ -47,7 +66,10 @@ def get_input_shapes(
         non_tensor_defaults = {}
 
         for name, param in sig.parameters.items():
-            if name in ("self", "args", "kwargs"):
+            if name in ("self"):
+                continue
+            elif name in ("args", "kwargs"):
+                warnings.warn("args and kwargs are not supported, and will be passed here")
                 continue
             annotation = param.annotation
             is_tensor = annotation == Tensor or "Tensor" in str(annotation)
@@ -68,76 +90,189 @@ def get_input_shapes(
                 elif annotation in (tuple, list):
                     non_tensor_defaults[name] = []
                 else:
+                    warnings.warn(f"No annotation for param: {param}, defaulting to None")
                     non_tensor_defaults[name] = None
 
         if len(tensor_args) > max_args:
             raise RuntimeError(f"Too many tensor inputs to infer (> {max_args})")
 
-        # ---------- 动态剪枝部分 ----------
+        batch_size = 1
+        per_input_min_dims = {input_name: 1 for input_name in tensor_args}
         failed_combos = set()
-        min_required_dims = 1
+        postponed_combos = set()
+        failed_combos_lock = RLock()
+        postponed_combos_lock = RLock()
+        if dim_sizes is None:
+            dim_sizes = [1, 2, 8, 16, 32, 64, 128, 256]
 
-        def generate_candidate_shapes(ndims: int = 3) -> List[Tuple[int, ...]]:
-            sizes = dim_sizes or [1, 2, 3, 8, 16, 32, 64, 96, 128, 256, 512]
+        def generate_candidate_shapes(ndims: int, min_required_dims: int) -> List[Tuple[int, ...]]:
+            """Generate shape combinations with varying dimensions and sizes."""
             shapes = set()
             for ndim in range(min_required_dims, ndims + 1):
-                for dims in itertools.product(sizes, repeat=ndim):
-                    if np.prod(dims) <= 512 * 512:
-                        shapes.add(dims)
-            return sorted(shapes, key=lambda x: (len(x), x))
+                for dims in itertools.product(dim_sizes, repeat=ndim):
+                    shapes.add(dims)
+            return list(shapes)
 
-        raw_shapes = generate_candidate_shapes(ndims=3)[:500]
-        batch_size = 1
-        candidate_shapes = [[(batch_size,) + shape for shape in raw_shapes] for _ in tensor_args]
+        def build_candidate_shapes():
+            raw_shapes_map = {}
+            candidate_shapes = []
+            for name in tensor_args:
+                min_dims = per_input_min_dims.get(name, 1)
+                raw_shapes = generate_candidate_shapes(ndims=ndims-1, min_required_dims=min_dims)
+                raw_shapes_map[name] = raw_shapes
+                candidate_shapes.append([(batch_size,) + shape for shape in raw_shapes])
+            return raw_shapes_map, candidate_shapes
 
-        logger.info(f"Total input shape combinations to try: {len(list(product(*candidate_shapes)))}")
+        raw_shapes_map, candidate_shapes = build_candidate_shapes()
+        logger.debug(f"Raw_shapes without batch size: {raw_shapes_map}")
+        shape_combos = list(itertools.product(*candidate_shapes))
+        random.shuffle(shape_combos)
+        logger.info(f"Total input shape combinations to try: {len(shape_combos)}")
+
+        # Build lookup for similar shape combos during failure recovery
+        dim_to_combos = defaultdict(list)
+        for combo in shape_combos:
+            for i, shape in enumerate(combo):
+                dim_to_combos[(shape, i)].append(combo)
+                dim_to_combos[len(shape)].append(combo)
+
+        tensor_cache = {}
+        def get_tensor(shape):
+            if shape not in tensor_cache:
+                tensor_cache[shape] = torch.randn(shape).float()
+            return tensor_cache[shape]
 
         def try_shape_combo(shape_combo):
-            nonlocal min_required_dims
-            if shape_combo in failed_combos:
+            thread_id = threading.get_ident()  # 获取当前线程ID
+            logger.debug(f"Thread ID {thread_id} is processing combo {future_to_shape[future]}")
+
+            if shape_combo in failed_combos or shape_combo in postponed_combos:
                 return None
             try:
                 input_kwargs = {
-                    name: torch.randn(shape).float()
+                    name: get_tensor(shape)
                     for name, shape in zip(tensor_args, shape_combo)
                 }
                 input_kwargs.update(non_tensor_defaults)
-                shapes = {name: tuple(tensor.shape) for name, tensor in input_kwargs.items()}
 
                 model.eval()
                 with torch.no_grad():
                     model(**input_kwargs)
 
-                return shapes
+                logger.info(f"Success with shape combo: {shape_combo}")
+                return {name: tuple(tensor.shape) for name, tensor in input_kwargs.items()}
+
             except Exception as e:
                 msg = str(e)
-                logger.debug(f"Failed combo {shape_combo}: {e}")
-                failed_combos.add(shape_combo)
+                logger.debug(f"Failed combo {shape_combo}: {msg}")
+                with failed_combos_lock:
+                    failed_combos.add(shape_combo)
 
-                # ---------- 错误感知逻辑 ----------
-                if "expected 3, got 2" in msg:
-                    min_required_dims = max(min_required_dims, 3)
-                elif "expected 4, got" in msg:
-                    min_required_dims = max(min_required_dims, 4)
+                max_similar = 10000
+
+                error_match_0 = re.search(r"not enough values to unpack.*?expected (\d+).*?got (\d+)", msg)
+                if error_match_0:
+                    expected_dims = int(error_match_0.group(1))
+                    actual_dims = int(error_match_0.group(2))
+
+                    similar_list = dim_to_combos.get(actual_dims, [])
+                    total = len(similar_list)
+                    start = random.randint(0, max(0, total - 1))
+                    similar_combos = similar_list[start:start + max_similar]
+                    similar_combos = [
+                        combo for combo in similar_combos
+                        if combo not in failed_combos and combo not in postponed_combos
+                    ]
+
+                    logger.debug(f"Postponing shape combos due to dim mismatch like: {similar_combos[:1]}")
+                    logger.debug(f"Current postponed combos: {len(postponed_combos)}")
+                    with postponed_combos_lock:
+                        postponed_combos.update(set(similar_combos))
+
+                error_match_1 = re.search("for tensor number (\d+) in the list", msg)
+                if error_match_1:
+                    tensor_index = int(error_match_1.group(1))
+                    failed_shape = shape_combo[tensor_index]
+                    similar_list = dim_to_combos.get((failed_shape, tensor_index), [])
+                    total = len(similar_list)
+                    start = random.randint(0, max(0, total - 1))
+                    similar_combos = similar_list[start:start + max_similar]
+                    similar_combos = [
+                        combo for combo in similar_combos
+                        if combo not in failed_combos and combo not in postponed_combos
+                    ]
+                    logger.debug(f"Postponing shape combos due to dim mismatch like: {similar_combos[:1]}")
+                    logger.debug(f"Current postponed combos: {len(postponed_combos)}")
+                    with postponed_combos_lock:
+                        postponed_combos.update(set(similar_combos))
 
                 return None
 
-        # ---------- 多线程尝试 ----------
-        shape_combos = list(product(*candidate_shapes))
-        with ThreadPoolExecutor(max_workers=min(16, os.cpu_count() * 4)) as executor:
-            future_to_shape = {executor.submit(try_shape_combo, combo): combo for combo in shape_combos}
+        # Parallel evaluation using thread pool
+        max_workers = min(16, os.cpu_count() * 4)
+        batch_size = 4096
+        result = None
 
-            for future in as_completed(future_to_shape):
+        for i in range(0, len(shape_combos), batch_size):
+            current_batch = shape_combos[i:i + batch_size]
+            future_to_shape = {}
+
+            def handle_future(future):
                 try:
-                    result = future.result(timeout=10)
+                    res = future.result(timeout=10)
+                    return res
+                except Exception as e:
+                    logger.debug(f"Error during shape combo evaluation: {e}")
+                    return None
+
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                for combo in current_batch:
+                    try:
+                        future = executor.submit(try_shape_combo, combo)
+                        future_to_shape[future] = combo
+                    except Exception as e:
+                        logger.debug(f"Failed to submit task for combo {combo}: {e}")
+                        continue
+                for future in as_completed(future_to_shape):
+                    result = handle_future(future)
                     if result:
                         for f in future_to_shape:
                             f.cancel()
-                        return result
-                except Exception as e:
-                    logger.debug(f"Error during shape combo evaluation: {e}")
+                        break
 
-        raise RuntimeError("Failed to infer input shape by all attempts.")
+            if result:
+                break
+
+        # Final fallback: retry postponed combinations
+        if not result:
+            logger.info("Retrying postponed shape combinations")
+            for shape_combo in list(postponed_combos):
+                if shape_combo in failed_combos:
+                    continue
+                try:
+                    input_kwargs = {
+                        name: torch.randn(shape).float()
+                        for name, shape in zip(tensor_args, shape_combo)
+                    }
+                    input_kwargs.update(non_tensor_defaults)
+
+                    model.eval()
+                    with torch.no_grad():
+                        model(**input_kwargs)
+
+                    logger.info(f"Recovered with original shape combo: {shape_combo}")
+                    result = {name: tuple(tensor.shape) for name, tensor in input_kwargs.items()}
+                    break
+                except Exception as e2:
+                    logger.debug(f"Retry failed for combo {shape_combo}: {e2}")
+                    failed_combos.add(shape_combo)
+            if result:
+                return result
+
+        if result:
+            return result
+        else:
+            raise RuntimeError("Failed to infer input shape by all attempts.")
 
     else:
         raise TypeError("Unsupported model type provided.")

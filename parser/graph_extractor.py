@@ -1,8 +1,10 @@
+import logging
 import re
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple, Union, Any
 from torch.fx.node import Node
 
+logger = logging.getLogger(__name__)
 
 def get_placeholders(traced_model) -> List[str]:
     """
@@ -41,6 +43,7 @@ def get_model_connections(traced_model) -> List[Dict[str, Union[str, None]]]:
             base_name, main_id, _ = match.groups()
             base_key = f"{base_name}{main_id}"
             constant_groups[base_key].append(node)
+            # logger.debug(f"Node {node.name} matched base key {base_key}")
         else:
             # Add non-constant nodes to module_nodes
             module_nodes[node.target] = node
@@ -71,13 +74,18 @@ def get_model_connections(traced_model) -> List[Dict[str, Union[str, None]]]:
         # Rebuild args
         new_args = []
         for arg in node.args:
-            if isinstance(arg, Node):
-                new_args += [arg]
-            else:
-                for a in arg:
-                    if not isinstance(a, Node):
-                        raise
-                    new_args += [a]
+            try:
+                if isinstance(arg, Node):
+                    new_args += [arg]
+                elif isinstance(arg, tuple):
+                    for a in arg:
+                        if not isinstance(a, Node):
+                            raise
+                        new_args += [a]
+                else:
+                    raise
+            except Exception as e:
+                logger.debug(f"Passing arg \"{arg}\" in node \"{node.name}\" with args {node.args}")
         node.args = tuple(new_args)
     for node in module_nodes.values():
         new_args = []
@@ -195,3 +203,16 @@ def build_user_map(module_nodes: Dict[Any, Node]) -> Dict[Node, List[Node]]:
         for user_node in node.users:
             user_map[node].append(user_node)
     return user_map
+
+def _print_node_info(node: Node) -> None:
+    print(f"Node {node.name}")
+    print(f"\top: {node.op}")
+    print(f"\ttarget: {node.target}")
+    print(f"\tall_input_nodes: {node.all_input_nodes}")
+    print(f"\targs: {node.args}")
+    print(f"\tkwargs: {node.kwargs}")
+    # print(f"\tmeta: {node.meta}")
+    print(f"\tusers: {node.users}")
+    print(f"\tnext: {node.next}")
+    print(f"\tprev: {node.prev}")
+    print(f"\ttype: {node.type}")

@@ -1,5 +1,6 @@
 # Output directories
 /__pycache__/
+output/
 *.pyc
 *.pyo
 *.pyd
@@ -20,6 +21,7 @@
 *.log
 *.tmp
 *.bak
+*_output.txt
 
 # IDE and editor files
 .vscode/

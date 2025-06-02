@@ -20,6 +20,8 @@ def create_example_inputs(
         Dict[str, Tensor]: Dictionary of example inputs.
     """
     example_inputs = {}
+    if input_shapes is None:
+        raise ValueError(f"Input shapes must be provided, but {input_shapes} is valid.")
 
     if isinstance(model, nn.Module):
         sig = inspect.signature(model.forward)
