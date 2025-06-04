@@ -2,7 +2,7 @@
 
 **TorchNetViz** is a PyTorch model visualization toolkit designed to help developers and researchers better understand the structure and flow of their neural network models.
 
-> 📚 **Documentation**: [https://lyingloong.github.io/Torchnetviz](https://lyingloong.github.io/Torchnetviz)  
+> 📚 **Documentation**: [https://lyingloong.github.io/TorchNetViz](https://lyingloong.github.io/TorchNetViz)  
 > ⚠️ This project is currently under active development. Contributions and feedback are welcome!
 
 ## 📌 Features
